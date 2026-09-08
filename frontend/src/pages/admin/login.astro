@@ -1,0 +1,78 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+
+<Base title="Admin — Login" lang="pt">
+  <main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
+    <h1 class="mb-6 font-mono text-xl text-[var(--color-primary)]">~# admin login</h1>
+    <form id="login-form" class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+        usuário
+        <input
+          id="field-username"
+          name="username"
+          type="text"
+          required
+          autocomplete="username"
+          class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+        />
+      </label>
+      <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+        senha
+        <input
+          id="field-password"
+          name="password"
+          type="password"
+          required
+          autocomplete="current-password"
+          class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+        />
+      </label>
+      <p id="login-error" class="hidden font-mono text-sm text-[var(--color-danger)]"></p>
+      <button
+        type="submit"
+        class="rounded border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 font-mono text-sm text-[var(--color-bg)]"
+        style="box-shadow: var(--glow);"
+      >entrar</button>
+    </form>
+  </main>
+</Base>
+
+<script>
+  import { API_BASE, getToken, setToken } from "../../lib/admin-api";
+
+  if (getToken()) {
+    window.location.href = "/admin";
+  }
+
+  const form = document.getElementById("login-form") as HTMLFormElement | null;
+  const errorEl = document.getElementById("login-error");
+  const usernameInput = document.getElementById("field-username") as HTMLInputElement | null;
+  const passwordInput = document.getElementById("field-password") as HTMLInputElement | null;
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl?.classList.add("hidden");
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: usernameInput?.value ?? "",
+          password: passwordInput?.value ?? "",
+        }),
+      });
+      if (!res.ok) throw new Error("credenciais inválidas");
+
+      const data = (await res.json()) as { access_token: string };
+      setToken(data.access_token);
+      window.location.href = "/admin";
+    } catch {
+      if (errorEl) {
+        errorEl.textContent = "usuário ou senha inválidos";
+        errorEl.classList.remove("hidden");
+      }
+    }
+  });
+</script>

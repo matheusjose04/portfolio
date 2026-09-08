@@ -124,6 +124,7 @@ const t = useTranslations(lang);
 
 <script>
   import { resolveFallback, type ApiProject } from "../data/fallback-projects";
+  import { resolveImageUrl } from "../lib/image-url";
   import { skills } from "../data/skills";
   import type { Lang } from "../i18n/utils";
 
@@ -212,7 +213,7 @@ const t = useTranslations(lang);
     const imgWrap = document.createElement("div");
     imgWrap.className = "aspect-video overflow-hidden";
     const img = document.createElement("img");
-    img.src = project.image_url ?? "/images/projects/placeholder-complete-1.svg";
+    img.src = resolveImageUrl(project.image_url, API_BASE) ?? "/images/projects/placeholder-complete-1.svg";
     img.alt = project.title;
     img.loading = "lazy";
     img.className = "h-full w-full object-cover transition duration-300 group-hover:scale-105";
@@ -311,8 +312,9 @@ const t = useTranslations(lang);
     }
     lastFocused = trigger;
 
-    if (project.image_url) {
-      imageEl.src = project.image_url;
+    const modalImageSrc = resolveImageUrl(project.image_url, API_BASE);
+    if (modalImageSrc) {
+      imageEl.src = modalImageSrc;
       imageEl.alt = project.title;
       imageEl.classList.remove("hidden");
     } else {

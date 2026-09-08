@@ -7,7 +7,7 @@ from ..auth import get_current_admin
 from ..crud import unique_slug
 from ..database import get_db
 from ..models import AdminUser, Project
-from ..schemas import ProjectCreate, ProjectOut, ProjectUpdate
+from ..schemas import ProjectAdminOut, ProjectCreate, ProjectOut, ProjectUpdate
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -71,6 +71,18 @@ def get_project(
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projeto não encontrado")
     return to_out(project, resolve_lang(accept_language, lang))
+
+
+@router.get("/id/{project_id}", response_model=ProjectAdminOut)
+def get_project_admin(
+    project_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    admin: Annotated[AdminUser, Depends(get_current_admin)],
+) -> Project:
+    project = db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projeto não encontrado")
+    return project
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)

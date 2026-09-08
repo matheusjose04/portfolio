@@ -70,3 +70,35 @@ def test_create_project_rejects_invalid_skill(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 422
+
+
+def test_get_project_admin_requires_token(client: TestClient) -> None:
+    res = client.get("/api/projects/id/1")
+    assert res.status_code == 401
+
+
+def test_get_project_admin_returns_raw_bilingual_fields(client: TestClient) -> None:
+    login = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    created = client.post(
+        "/api/projects",
+        json={
+            "title": "Projeto Bilíngue",
+            "category": "small",
+            "skills": ["python"],
+            "description_pt": "descrição em pt",
+            "description_en": "description in en",
+            "why_pt": "motivo",
+            "why_en": "why",
+        },
+        headers=headers,
+    )
+    project_id = created.json()["id"]
+
+    res = client.get(f"/api/projects/id/{project_id}", headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["description_pt"] == "descrição em pt"
+    assert data["description_en"] == "description in en"

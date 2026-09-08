@@ -1,0 +1,280 @@
+---
+import { skills } from "../../data/skills";
+---
+
+<form id="project-form" class="flex max-w-2xl flex-col gap-4">
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    título
+    <input
+      id="field-title"
+      type="text"
+      required
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    />
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    categoria
+    <select
+      id="field-category"
+      required
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    >
+      <option value="complete">complete-app</option>
+      <option value="small">small-project</option>
+    </select>
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    descrição (PT)
+    <textarea
+      id="field-description-pt"
+      required
+      rows="3"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    ></textarea>
+  </label>
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    descrição (EN)
+    <textarea
+      id="field-description-en"
+      rows="3"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    ></textarea>
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    por que fiz (PT)
+    <textarea
+      id="field-why-pt"
+      required
+      rows="2"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    ></textarea>
+  </label>
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    por que fiz (EN)
+    <textarea
+      id="field-why-en"
+      rows="2"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    ></textarea>
+  </label>
+
+  <fieldset class="flex flex-col gap-2">
+    <legend class="mb-1 text-sm text-[var(--color-text)]">skills</legend>
+    <div class="flex flex-wrap gap-3">
+      {skills.map((s) => (
+        <label class="flex items-center gap-1.5 font-mono text-xs text-[var(--color-text)]">
+          <input type="checkbox" class="field-skill" value={s.id} />
+          {s.name}
+        </label>
+      ))}
+    </div>
+  </fieldset>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    GitHub URL
+    <input
+      id="field-github"
+      type="url"
+      placeholder="https://github.com/..."
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    />
+  </label>
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    Demo URL
+    <input
+      id="field-demo"
+      type="url"
+      placeholder="https://..."
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    />
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    imagem
+    <input
+      id="field-image-file"
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)]"
+    />
+    <img id="field-image-preview" class="mt-2 hidden h-24 w-40 rounded object-cover" alt="" />
+    <p id="field-image-status" class="font-mono text-xs text-[var(--color-text-dim)]"></p>
+  </label>
+
+  <label class="flex items-center gap-2 text-sm text-[var(--color-text)]">
+    <input id="field-featured" type="checkbox" />
+    destaque (featured)
+  </label>
+
+  <p id="form-error" class="hidden font-mono text-sm text-[var(--color-danger)]"></p>
+
+  <div class="flex gap-3">
+    <button
+      type="submit"
+      class="rounded border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 font-mono text-sm text-[var(--color-bg)]"
+      style="box-shadow: var(--glow);"
+    >salvar</button>
+    <a href="/admin" class="rounded border border-[var(--color-border)] px-4 py-2 font-mono text-sm text-[var(--color-text)]">cancelar</a>
+  </div>
+</form>
+
+<script>
+  import { adminFetch, API_BASE } from "../../lib/admin-api";
+  import { resolveImageUrl } from "../../lib/image-url";
+
+  interface AdminProject {
+    id: number;
+    title: string;
+    slug: string;
+    description_pt: string;
+    description_en: string;
+    why_pt: string;
+    why_en: string;
+    category: "complete" | "small";
+    skills: string[];
+    github_url: string | null;
+    demo_url: string | null;
+    image_url: string | null;
+    featured: boolean;
+    created_at: string;
+  }
+
+  interface ProjectPayload {
+    title: string;
+    category: "complete" | "small";
+    skills: string[];
+    github_url: string | null;
+    demo_url: string | null;
+    image_url: string | null;
+    featured: boolean;
+    description_pt: string;
+    description_en: string;
+    why_pt: string;
+    why_en: string;
+  }
+
+  const form = document.getElementById("project-form") as HTMLFormElement | null;
+  const errorEl = document.getElementById("form-error");
+  const titleInput = document.getElementById("field-title") as HTMLInputElement | null;
+  const categorySelect = document.getElementById("field-category") as HTMLSelectElement | null;
+  const descriptionPtInput = document.getElementById("field-description-pt") as HTMLTextAreaElement | null;
+  const descriptionEnInput = document.getElementById("field-description-en") as HTMLTextAreaElement | null;
+  const whyPtInput = document.getElementById("field-why-pt") as HTMLTextAreaElement | null;
+  const whyEnInput = document.getElementById("field-why-en") as HTMLTextAreaElement | null;
+  const githubInput = document.getElementById("field-github") as HTMLInputElement | null;
+  const demoInput = document.getElementById("field-demo") as HTMLInputElement | null;
+  const featuredInput = document.getElementById("field-featured") as HTMLInputElement | null;
+  const imageFileInput = document.getElementById("field-image-file") as HTMLInputElement | null;
+  const imagePreview = document.getElementById("field-image-preview") as HTMLImageElement | null;
+  const imageStatus = document.getElementById("field-image-status");
+
+  const projectId = new URLSearchParams(window.location.search).get("id");
+  let currentImageUrl: string | null = null;
+
+  function showPreview(url: string): void {
+    if (!imagePreview) return;
+    imagePreview.src = url;
+    imagePreview.classList.remove("hidden");
+  }
+
+  imageFileInput?.addEventListener("change", async () => {
+    const file = imageFileInput.files?.[0];
+    if (!file) return;
+    if (imageStatus) imageStatus.textContent = "enviando...";
+
+    const body = new FormData();
+    body.append("file", file);
+    const res = await adminFetch("/api/upload", { method: "POST", body });
+
+    if (!res.ok) {
+      if (imageStatus) imageStatus.textContent = "falha no upload";
+      return;
+    }
+
+    const data = (await res.json()) as { url: string };
+    currentImageUrl = data.url;
+    const preview = resolveImageUrl(data.url, API_BASE);
+    if (preview) showPreview(preview);
+    if (imageStatus) imageStatus.textContent = "imagem enviada";
+  });
+
+  async function loadForEdit(id: string): Promise<void> {
+    const res = await adminFetch(`/api/projects/id/${id}`);
+    if (!res.ok) {
+      if (errorEl) {
+        errorEl.textContent = "projeto não encontrado";
+        errorEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    const project = (await res.json()) as AdminProject;
+    if (titleInput) titleInput.value = project.title;
+    if (categorySelect) categorySelect.value = project.category;
+    if (descriptionPtInput) descriptionPtInput.value = project.description_pt;
+    if (descriptionEnInput) descriptionEnInput.value = project.description_en;
+    if (whyPtInput) whyPtInput.value = project.why_pt;
+    if (whyEnInput) whyEnInput.value = project.why_en;
+    if (githubInput) githubInput.value = project.github_url ?? "";
+    if (demoInput) demoInput.value = project.demo_url ?? "";
+    if (featuredInput) featuredInput.checked = project.featured;
+
+    currentImageUrl = project.image_url;
+    const preview = resolveImageUrl(project.image_url, API_BASE);
+    if (preview) showPreview(preview);
+
+    document.querySelectorAll<HTMLInputElement>(".field-skill").forEach((el) => {
+      el.checked = project.skills.includes(el.value);
+    });
+  }
+
+  if (projectId) {
+    void loadForEdit(projectId);
+  }
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl?.classList.add("hidden");
+
+    const selectedSkills = Array.from(
+      document.querySelectorAll<HTMLInputElement>(".field-skill:checked")
+    ).map((el) => el.value);
+
+    const payload: ProjectPayload = {
+      title: titleInput?.value ?? "",
+      category: (categorySelect?.value as "complete" | "small") ?? "small",
+      skills: selectedSkills,
+      github_url: githubInput?.value ? githubInput.value : null,
+      demo_url: demoInput?.value ? demoInput.value : null,
+      image_url: currentImageUrl,
+      featured: featuredInput?.checked ?? false,
+      description_pt: descriptionPtInput?.value ?? "",
+      description_en: descriptionEnInput?.value ?? "",
+      why_pt: whyPtInput?.value ?? "",
+      why_en: whyEnInput?.value ?? "",
+    };
+
+    const isEdit = projectId !== null;
+    const res = await adminFetch(isEdit ? `/api/projects/${projectId}` : "/api/projects", {
+      method: isEdit ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data: unknown = await res.json().catch(() => null);
+      const detail =
+        data && typeof data === "object" && "detail" in data ? String((data as { detail: unknown }).detail) : null;
+      if (errorEl) {
+        errorEl.textContent = detail ?? "erro ao salvar";
+        errorEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    window.location.href = "/admin";
+  });
+</script>

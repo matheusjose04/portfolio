@@ -603,3 +603,102 @@ novo deve aparecer na grade, sem precisar rebuildar o frontend. Isso é o
 - Fetch consolidado (uma chamada, filtro local) em vez de uma chamada
   por aba — decisão registrada acima, mais simples e com o mesmo
   resultado observável pro usuário.
+
+## Etapa 8 — Painel Admin
+
+**O que foi feito:**
+Construímos o painel `/admin`: login com JWT, lista de projetos com
+editar/excluir (excluir pede confirmação), formulário de criar/editar
+com todos os campos do modelo (incluindo upload de imagem de verdade), e
+proteção automática — sem token válido, qualquer página admin manda pro
+login.
+
+**Arquivos criados/alterados:**
+- `backend/app/schemas.py` — novo `ProjectAdminOut` (campos brutos
+  `description_pt/en`, `why_pt/en`, sem resolver idioma)
+- `backend/app/routers/projects.py` — novo endpoint
+  `GET /api/projects/id/{id}` (só admin), usado pelo formulário de edição
+- `backend/tests/test_api.py` — 2 testes novos pro endpoint acima
+- `frontend/src/lib/admin-api.ts` — `adminFetch()` (anexa o token, trata
+  401/403), `getToken/setToken/clearToken`
+- `frontend/src/lib/image-url.ts` — `resolveImageUrl()` (ver decisão/bug
+  abaixo)
+- `frontend/src/layouts/AdminLayout.astro` — sidebar (projetos/+novo/sair)
+  + guarda de autenticação
+- `frontend/src/pages/admin/login.astro` — form de login
+- `frontend/src/pages/admin/index.astro` — lista + modal de confirmação
+  de exclusão
+- `frontend/src/pages/admin/new.astro`, `edit.astro` — usam o
+  `ProjectForm` compartilhado
+- `frontend/src/components/admin/ProjectForm.astro` — formulário
+  completo (create E edit no mesmo componente)
+
+**Conceitos explicados:**
+- **Guarda de rota no cliente (sem servidor de sessão)**: como o site é
+  estático (sem backend Node/Python renderizando páginas), não existe
+  "sessão" no servidor. A proteção é: todo layout de página admin roda um
+  script que verifica `localStorage.admin_token` ao carregar; se não
+  tiver, redireciona pro login ANTES do conteúdo ser útil. Não é 100%
+  seguro sozinho — por isso a API TAMBÉM exige o token em cada chamada
+  protegida (a "segurança de verdade" é sempre no backend).
+- **Formulário único pra criar E editar**: em vez de dois componentes
+  quase idênticos, um só `ProjectForm.astro` lê `?id=` da URL — se tiver,
+  busca os dados e preenche os campos (modo edição); se não tiver, começa
+  vazio (modo criação). No envio, a única diferença é `POST` (criar) vs
+  `PUT` (editar).
+- **Por que precisou de um endpoint novo (`/api/projects/id/{id}`)**: o
+  endpoint público (`GET /api/projects/{slug}`) devolve `description` já
+  resolvida num idioma só — ótimo pro site, mas o formulário de edição
+  precisa dos DOIS campos (`description_pt` E `description_en`) pra
+  deixar o admin editar cada um. Criamos um endpoint separado, protegido
+  por token, que devolve os campos "crus" do banco.
+
+**Como testar:**
+1. Backend (`uvicorn`) e frontend (`astro dev`) rodando
+2. `http://localhost:4321/admin` sem estar logado → redireciona pro
+   `/admin/login` — testei e confere
+3. Login errado → mensagem de erro; login certo (`admin`/`admin123`) →
+   entra e lista os 4 projetos do seed — testei e confere
+4. `+ novo` → preencher formulário, subir uma imagem de verdade (testei
+   com um PNG gerado na hora) → salvar → projeto aparece na lista E no
+   site público, com a imagem certa
+5. `editar` → campos vêm preenchidos (inclusive os dois idiomas) →
+   mudar o título → salvar → slug muda sozinho
+6. `excluir` → modal `~# rm <título>? [y/n]` → "n" cancela, "y" exclui
+   de verdade (testei os dois caminhos)
+7. Token inválido/expirado + tentar uma ação protegida (ex: excluir) →
+   limpa o token e manda pro login automaticamente — testei forçando um
+   token inválido no `localStorage`
+8. `sair` → limpa token, volta pro login
+9. `cd backend && venv\Scripts\python -m pytest -q` → 8 testes passam
+
+**Desafio opcional:**
+Abra o DevTools → Application → Local Storage enquanto navega pelo
+`/admin`, e observe o `admin_token` sendo criado no login e apagado no
+"sair" (ou automaticamente, se você forçar um token inválido e tentar
+excluir algo). Isso mostra na prática onde mora esse "crachá" de sessão.
+
+**Decisões tomadas:**
+- **Bug real encontrado e corrigido durante o teste manual**: a API de
+  upload devolve uma URL relativa (`/uploads/arquivo.png`), pensada pra
+  ser servida PELA PRÓPRIA API. Só que a `docs/deploy/caddy-nginx.md`
+  já deixa claro que produção usa domínios SEPARADOS pro frontend
+  (`portfolio.dominio`) e a API (`api.portfolio.dominio`) — igual ao dev
+  (`:4321` vs `:8000`). Um `<img src="/uploads/x.png">` carregado dentro
+  do FRONTEND tentaria buscar a imagem no domínio ERRADO (o do próprio
+  site, não o da API). Corrigido com `resolveImageUrl()`: qualquer
+  caminho que comece com `/uploads/` ganha o domínio da API antes de
+  virar `src` de imagem — usado no preview do formulário, na lista do
+  admin e nos cards/modal públicos de projeto. O valor GRAVADO no banco
+  continua sendo o caminho relativo (mais correto — não trava a URL da
+  API dentro dos dados).
+- **Rota `/admin/edit/[id]` virou `/admin/edit?id=`**: `docs/componentes/
+  Admin.md` sugere uma rota dinâmica `/admin/edit/[id]`, mas o site usa
+  `output: "static"` (sem servidor) — rotas dinâmicas do Astro nesse modo
+  precisam saber TODOS os ids possíveis no momento do build, o que é
+  impossível pra projetos criados depois, sem rebuild, pelo próprio
+  admin. Uma única página estática lendo `?id=` da URL no navegador
+  resolve o mesmo problema sem essa limitação.
+- Mantivemos o painel admin só em português (sem `/en/admin`) — é uma
+  ferramenta interna de uso pessoal, não uma página pro público; o
+  `MASTER_PROMPT.md` não exige i18n pro admin.

@@ -94,6 +94,27 @@ class ProjectOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ProjectAdminOut(BaseModel):
+    """Igual ao Project do banco, sem resolver idioma — só pro form de edição do admin."""
+
+    id: int
+    title: str
+    slug: str
+    description_pt: str
+    description_en: str
+    why_pt: str
+    why_en: str
+    category: str
+    skills: list[str]
+    github_url: str | None
+    demo_url: str | None
+    image_url: str | None
+    featured: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str
