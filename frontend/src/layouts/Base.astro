@@ -1,0 +1,31 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  lang?: "pt" | "en";
+}
+
+const { title, lang = "pt" } = Astro.props;
+---
+
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <script is:inline>
+      // Roda antes do primeiro paint: evita "flash" do tema errado no reload.
+      const stored = localStorage.getItem("theme");
+      const theme = stored === "light" || stored === "dark"
+        ? stored
+        : "dark"; // dark é o padrão do site (regra do MASTER_PROMPT)
+      document.documentElement.dataset.theme = theme;
+    </script>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
