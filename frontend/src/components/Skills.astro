@@ -39,6 +39,7 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
         type="button"
         class="skill-card flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-center transition hover:-translate-y-1 hover:border-[var(--color-primary)] hover:shadow-[var(--glow)]"
         data-category={s.category}
+        data-skill-id={s.id}
         data-skill={JSON.stringify(s)}
       >
         <i class={`${s.icon} text-3xl`} aria-hidden="true"></i>
@@ -207,5 +208,24 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
         first.focus();
       }
     }
+  });
+
+  // Disparado pelo ProjectModal ao clicar numa badge de skill: troca pra
+  // aba certa e dá um destaque temporário no card correspondente.
+  window.addEventListener("skills:focus", (e) => {
+    const id = (e as CustomEvent<{ id: string }>).detail?.id;
+    if (!id) return;
+    const card = document.querySelector<HTMLButtonElement>(`.skill-card[data-skill-id="${id}"]`);
+    if (!card) return;
+
+    const category = card.dataset.category;
+    const targetTab = Array.from(tabs).find((tab) => tab.dataset.category === category);
+    targetTab?.click();
+
+    card.scrollIntoView({ block: "center" });
+    card.classList.add("outline", "outline-2", "outline-[var(--color-primary)]");
+    window.setTimeout(() => {
+      card.classList.remove("outline", "outline-2", "outline-[var(--color-primary)]");
+    }, 1500);
   });
 </script>

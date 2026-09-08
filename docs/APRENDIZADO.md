@@ -518,3 +518,88 @@ token — veja o erro 401. Depois faça login em `/api/auth/login`, copie o
   (não inventamos links). **Pendência pro usuário:** trocar esses 4
   projetos pelos reais, pelo painel `/admin` (Etapa 8) ou editando o
   `CONTENT.md` e rodando o seed de novo.
+
+## Etapa 7 — Seção Projetos
+
+**O que foi feito:**
+Criamos a grade de projetos que consome a API real (`GET /api/projects`),
+com abas por categoria, contador de itens, skeleton de carregamento,
+fallback pra dados locais se a API cair (com botão "tentar de novo"), e
+um modal de detalhes reaproveitando a mesma infraestrutura de
+acessibilidade do modal de skills — inclusive integração entre os dois:
+clicar numa skill dentro do modal de projeto pula pra seção Skills, troca
+de aba se precisar, e destaca o card certo.
+
+**Arquivos criados/alterados:**
+- `frontend/src/components/ProjectsGrid.astro` — grid + abas + skeleton +
+  fetch com fallback + modal de projeto
+- `frontend/src/components/Skills.astro` — adiciona `data-skill-id` nos
+  cards e um listener do evento `skills:focus` (troca de aba + destaque
+  temporário) disparado pelo modal de projetos
+- `frontend/src/data/fallback-projects.ts` — cópia local dos 4
+  placeholders do `backend/seed.py`, usada só quando a API está offline
+- `frontend/src/i18n/pt.json`, `en.json` — chaves `projects.*` completas
+  (heading, tabs, empty, error, retry, modal.*)
+- `frontend/.env.example` — documenta `PUBLIC_API_URL`
+- `frontend/src/pages/index.astro` / `en/index.astro` — adicionam
+  `<ProjectsGrid lang={...} />`
+
+**Conceitos explicados:**
+- **`fetch` com fallback (try/catch)**: o código tenta buscar os dados
+  reais da API; se a rede falhar OU a resposta não for "ok" (`res.ok`),
+  cai no bloco `catch` e usa os dados locais (`fallback-projects.ts`).
+  Assim o site nunca fica com a seção de projetos vazia, mesmo se o
+  backend estiver fora do ar.
+- **`CustomEvent` pra comunicação entre componentes**: `Skills.astro` e
+  `ProjectsGrid.astro` não se importam um do outro — eles são
+  independentes. Pra um "avisar" o outro (clicar numa skill no modal de
+  projeto deve fazer algo na seção Skills), usamos
+  `window.dispatchEvent(new CustomEvent("skills:focus", {...}))` de um
+  lado e `window.addEventListener("skills:focus", ...)` do outro. É como
+  gritar um recado pra quem quiser ouvir, sem precisar se conhecer.
+- **Por que construir os cards com `document.createElement` em vez de
+  `innerHTML`**: os dados dos projetos vêm da API e, a partir da Etapa 8,
+  vão poder ser digitados por um admin num formulário. Se a gente
+  colocasse esse texto direto num `innerHTML`, um título malicioso tipo
+  `<img src=x onerror=alert(1)>` viraria HTML de verdade e executaria
+  script (isso se chama XSS). Usando `textContent` e
+  `document.createElement`, o texto SEMPRE é tratado como texto puro,
+  nunca como HTML — mesmo que venha de uma fonte não confiável.
+- **Contagem por aba sem duas requisições**: em vez de seguir a
+  literalidade da spec (`GET .../api/projects?category=${tab}`, uma
+  chamada por aba), buscamos a lista completa (`GET .../api/projects`)
+  UMA vez e filtramos no navegador. Isso já dá o contador das duas abas
+  de graça e evita refazer a requisição toda vez que o usuário clica
+  numa aba.
+
+**Como testar:**
+1. `cd backend && venv\Scripts\python -m uvicorn app.main:app --reload`
+   (porta 8000) e `cd frontend && npx astro dev --background` (porta 4321)
+2. `http://localhost:4321/#projetos` → 2 projetos em #complete-apps,
+   contador certo nas duas abas — testei e confere
+3. Clicar num card → modal com imagem, descrição, "Por que fiz",
+   skills, botão Demo desabilitado (sem `demo_url`) — testei e confere
+4. Clicar numa skill dentro do modal → fecha o modal, rola até #skills,
+   troca pra aba certa e destaca o card por 1.5s — testei e confere
+5. Parar o backend (`Ctrl+C` no uvicorn) e recarregar a página → aparece
+   "> erro: api offline" + botão "tentar de novo", mas os cards
+   continuam aparecendo (dados locais) — testei e confere
+6. Religar o backend e clicar em "tentar de novo" → erro some, dados
+   reais voltam — testei e confere
+7. `npx astro check` e `npm run build` sem erros
+
+**Desafio opcional:**
+Com o backend rodando, crie um projeto novo direto pelo Swagger
+(`http://localhost:8000/docs`, endpoint `POST /api/projects`, precisa do
+token de `/api/auth/login` primeiro) e recarregue a página — o projeto
+novo deve aparecer na grade, sem precisar rebuildar o frontend. Isso é o
+"sem rebuild" que o critério de aceite do projeto pede.
+
+**Decisões tomadas:**
+- O link "direto pra um projeto" via URL (`#projeto/<slug>`) citado como
+  "nice-to-have" em `docs/componentes/ProjectModal.md` foi deixado de
+  fora por enquanto — é uma melhoria opcional, não um critério de
+  aceite da etapa.
+- Fetch consolidado (uma chamada, filtro local) em vez de uma chamada
+  por aba — decisão registrada acima, mais simples e com o mesmo
+  resultado observável pro usuário.

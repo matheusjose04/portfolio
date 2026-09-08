@@ -35,10 +35,18 @@
     "modal": { "level": "Level", "projectsLink": "See projects using this skill →" }
   },
   "projects": {
-    "heading": "",
-    "tabs": { "complete": "", "small": "" },
-    "empty": "",
-    "modal": { "why": "", "skillsUsed": "", "demo": "", "github": "" }
+    "heading": "~/projects $ ls",
+    "tabs": { "complete": "#complete-apps", "small": "#small-projects" },
+    "empty": "> no projects in this category yet",
+    "error": "> error: api offline",
+    "retry": "try again",
+    "modal": {
+      "why": "Why I built it",
+      "skillsUsed": "Skills used",
+      "demo": "Demo",
+      "github": "GitHub",
+      "demoUnavailable": "no public demo"
+    }
   },
   "contact": { "heading": "", "text": "", "email": "" },
   "footer": { "rights": "", "exit": "" },
