@@ -340,3 +340,79 @@ você.
 **Decisões tomadas:**
 - Nenhuma pendência nova nesta etapa — tudo que aparece na seção Sobre
   veio direto do `CONTENT.md`.
+
+## Etapa 5 — Skills com Modais
+
+**O que foi feito:**
+Criamos a grade de skills com 4 abas de categoria (LANGUAGES, DATABASES,
+FRAMEWORKS, OTHER TOOLS) e um modal (janela de detalhes) que abre ao
+clicar num card, mostrando ícone, nível (com barrinha animada),
+descrição da tecnologia e como o usuário já usou ela — tudo com
+acessibilidade (teclado, foco preso, ESC fecha).
+
+**Arquivos criados/alterados:**
+- `frontend/src/data/skills.ts` — os dados das 8 skills marcadas no
+  `CONTENT.md` (Python, TypeScript, JavaScript, SQLite, FastAPI, Docker,
+  Git/GitHub, Linux), no formato de `docs/dados/skills-data.md`
+- `frontend/src/components/Skills.astro` — grid + abas + modal único
+  reutilizado (em vez de um modal por skill)
+- `frontend/src/i18n/pt.json`, `en.json` — `skills.heading`,
+  `skills.categories.*`, `skills.modal.*`
+- `frontend/src/styles/global.css` — import do `devicon/devicon.min.css`
+  (ícones das tecnologias)
+- `package.json` — nova dependência `devicon`
+
+**Conceitos explicados:**
+- **Um modal só, reaproveitado**: em vez de criar 8 `<dialog>` (um por
+  skill) e ter que garantir que só um abre por vez, criamos UM elemento
+  de modal fixo no HTML e, ao clicar num card, preenchemos ele com os
+  dados daquela skill via JavaScript (`textContent`, `className`). Isso
+  já garante sozinho a regra "só um modal aberto por vez" — não existe
+  um segundo modal pra abrir.
+- **Focus trap (prender o foco)**: com o modal aberto, apertar Tab não
+  pode "escapar" pro resto da página (ruim pra quem navega só com
+  teclado). O código escuta `Tab`/`Shift+Tab` e, quando o foco chegaria
+  no último elemento focável do modal (ou no primeiro, indo pra trás),
+  ele "pula" de volta pro começo (ou fim) — o foco fica preso dentro do
+  modal.
+- **Devolver o foco de onde veio**: guardamos em `lastFocused` qual
+  botão/card foi clicado pra abrir o modal. Ao fechar (ESC, X, ou
+  clique fora), o foco volta pra esse elemento — importante pra quem
+  usa teclado não "perder o lugar" na página.
+- **Filtro de categoria só com CSS `display`**: clicar numa aba não
+  recria o grid — só percorre os cards existentes e esconde
+  (`display: none`) os que não são da categoria escolhida. Mais simples
+  e rápido que re-renderizar.
+
+**Como testar:**
+1. `cd frontend && npx astro dev --background`
+2. `http://localhost:4321/#skills` → só os cards de LANGUAGES aparecem
+   de cara (a aba já vem marcada como ativa no HTML)
+3. Clicar em "OTHER TOOLS" → troca pra Docker/Git-GitHub/Linux
+4. Clicar num card → modal abre com nível, resumo e experiência
+5. `Esc` fecha o modal e o foco volta pro card
+6. Clicar fora do card (no fundo escurecido) também fecha
+7. `npx astro check` e `npm run build` sem erros
+
+**Desafio opcional:**
+Aperte Tab repetidamente com o modal aberto e veja o foco "circular"
+entre o X de fechar e o link "Ver projetos" sem nunca escapar pro resto
+da página — depois tente proposital­mente remover o `focus trap` do
+código e repita o teste pra sentir a diferença de acessibilidade.
+
+**Decisões tomadas:**
+- O `CONTENT.md` só dá 3 níveis (`basico`/`intermediario`/`avancado`),
+  mas `docs/dados/skills-data.md` usa uma escala de 1 a 5. Mapeamos
+  `basico → 2` e `intermediario → 3` (nenhuma skill do usuário está
+  marcada como avançado, então `4` e `5` não são usados por enquanto).
+  Registrado no código-fonte também (comentário em `skills.ts`).
+- **Bug encontrado e corrigido durante o teste manual**: o filtro de
+  categoria só rodava quando uma aba era CLICADA — no carregamento
+  inicial da página, a aba "LANGUAGES" aparecia marcada como ativa
+  visualmente, mas todos os 8 cards ficavam visíveis (o filtro nunca
+  tinha rodado). Corrigido chamando a mesma função de filtro uma vez,
+  já no carregamento, pra aba que vem ativa por padrão.
+- Durante o teste, uma ferramenta de automação do navegador (não o
+  código do site) abriu o modal sozinha numa das capturas de tela —
+  confirmamos com um teste limpo, direto no Chrome real, que isso era
+  um artefato da ferramenta de teste, não um bug do site.

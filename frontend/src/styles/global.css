@@ -5,6 +5,7 @@
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
+@import "devicon/devicon.min.css";
 
 /* Tokens — copiados de docs/estilo/tokens.md (fonte normativa na ausência de UI_SPECS.md) */
 :root {

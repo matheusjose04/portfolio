@@ -25,14 +25,14 @@
     }
   },
   "skills": {
-    "heading": "",
+    "heading": "~# skills",
     "categories": {
-      "languages": "",
-      "databases": "",
-      "frameworks": "",
-      "tools": ""
+      "languages": "languages",
+      "databases": "databases",
+      "frameworks": "frameworks",
+      "tools": "other tools"
     },
-    "modal": { "level": "", "projectsLink": "" }
+    "modal": { "level": "Nível", "projectsLink": "Ver projetos com esta skill →" }
   },
   "projects": {
     "heading": "",
