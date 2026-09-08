@@ -416,3 +416,105 @@ código e repita o teste pra sentir a diferença de acessibilidade.
   código do site) abriu o modal sozinha numa das capturas de tela —
   confirmamos com um teste limpo, direto no Chrome real, que isso era
   um artefato da ferramenta de teste, não um bug do site.
+
+## Etapa 6 — Backend FastAPI
+
+**O que foi feito:**
+Criamos a API em Python/FastAPI: modelos de banco (Project, AdminUser),
+schemas de validação (Pydantic v2), autenticação JWT, CRUD completo de
+projetos (público pra leitura, protegido por token pra escrever), upload
+de imagem, e o script de seed com admin + 4 projetos placeholder
+(explicado abaixo).
+
+**Arquivos criados/alterados:**
+- `backend/app/config.py` — lê `.env` (SECRET_KEY, admin, CORS, etc.)
+- `backend/app/database.py` — engine SQLAlchemy, `SessionLocal`, `get_db`
+- `backend/app/models.py` — `Project` e `AdminUser` (SQLAlchemy 2.x)
+- `backend/app/schemas.py` — `ProjectCreate/Update/Out`, `LoginRequest`,
+  validação de URL (`http(s)://`) e de skills válidas
+- `backend/app/auth.py` — hash de senha (bcrypt), criação/verificação de
+  JWT, dependência `get_current_admin`
+- `backend/app/crud.py` — geração de slug único (com transliteração de
+  acento) a partir do título
+- `backend/app/routers/{auth,projects,upload}.py` — os endpoints
+- `backend/app/main.py` — monta tudo, CORS, `/uploads` estático, `/api/health`
+- `backend/seed.py` — cria admin + 4 projetos placeholder (idempotente)
+- `backend/tests/` — 6 testes pytest (health, login certo/errado, criar
+  sem token, criar com token + aparece na listagem, skill inválida)
+- `backend/.env.example` / `backend/.env` — variáveis de ambiente
+  (o `.env` real tem uma SECRET_KEY gerada e não é commitado)
+- `backend/requirements.txt` — dependências (fixadas por versão)
+- `frontend/public/images/projects/*.svg` — 4 imagens placeholder locais
+- `.gitignore` (raiz) — adiciona `backend/uploads/` e `.pytest_cache/`
+
+**Conceitos explicados:**
+- **Por que `description` no banco é `description_pt`/`description_en`
+  mas a API devolve só `description`**: o banco guarda os dois idiomas
+  pra sempre ter a informação completa; a API "resolve" qual mostrar
+  baseado no header `Accept-Language` do navegador (ou `?lang=`),
+  devolvendo só UM campo já no idioma certo. O frontend nem precisa
+  saber que existem dois campos no banco.
+- **JWT (JSON Web Token)**: depois do login certo, a API gera um "crachá"
+  assinado digitalmente (o token) contendo o nome do admin e uma data de
+  expiração. Esse crachá vai no header `Authorization: Bearer <token>`
+  em cada requisição protegida. A API confere a assinatura (com a
+  `SECRET_KEY`) pra saber se o crachá é válido e não foi forjado — sem
+  precisar guardar sessão em lugar nenhum.
+- **Dependency Injection do FastAPI (`Depends`)**: `Depends(get_current_admin)`
+  num endpoint significa "antes de rodar essa função, rode
+  `get_current_admin` primeiro". Se o token for inválido, ela já
+  interrompe com 401 antes mesmo do código do endpoint rodar. Isso evita
+  repetir a checagem de auth em todo endpoint manualmente.
+- **Idempotência do seed**: rodar `python seed.py` duas vezes não deveria
+  duplicar nada. A solução foi checar, ANTES de inserir, se já existe um
+  projeto com aquele slug esperado — se existir, pula.
+
+**Como testar:**
+1. `cd backend && python -m venv venv` (já feito) e
+   `venv\Scripts\pip install -r requirements.txt`
+2. Copiar `.env.example` pra `.env` e gerar uma `SECRET_KEY` real com
+   `python -c "import secrets; print(secrets.token_hex(32))"`
+3. `venv\Scripts\python -m pytest -q` → 6 testes passam
+4. `venv\Scripts\python seed.py` → cria admin + 4 projetos (rodar de novo
+   não duplica)
+5. `venv\Scripts\python -m uvicorn app.main:app --reload` → `/docs` abre
+   (testei manualmente: GET lista projetos, POST sem token → 401, POST
+   com token → 201, PUT/DELETE funcionam, filtro `?featured=true`
+   funciona, `Accept-Language: en` troca o idioma da resposta)
+
+**Desafio opcional:**
+Abra `http://localhost:8000/docs` (Swagger, gerado automaticamente pelo
+FastAPI a partir dos schemas) e tente criar um projeto por lá, sem
+token — veja o erro 401. Depois faça login em `/api/auth/login`, copie o
+`access_token`, clique em "Authorize" no topo da página e tente de novo.
+
+**Decisões tomadas:**
+- **Bug encontrado e corrigido**: a versão mais nova do pacote `bcrypt`
+  (5.x) quebra a integração com `passlib` (biblioteca de hash de senha) —
+  erro `password cannot be longer than 72 bytes` no autoteste interno do
+  passlib. Fixamos a versão do `bcrypt` em `4.0.1` no
+  `requirements.txt`, que é compatível.
+- **Bug encontrado e corrigido**: a geração de slug (`slugify`) não
+  removia acentos corretamente — "Sistema de Gestão X" virava
+  `sistema-de-gest-o-x` (o "ã" simplesmente sumia). Corrigido com
+  `unicodedata.normalize` pra transliterar (ã→a, ç→c, etc.) antes de
+  limpar o resto — agora vira `sistema-de-gestao-x`.
+- **Lista de skills válidas duplicada** entre `frontend/src/data/skills.ts`
+  (TypeScript) e `backend/app/schemas.py` (Python) — não há build
+  compartilhado entre as duas linguagens nesta fase do projeto, então a
+  validação do backend usa sua própria cópia da lista de ids. Se
+  adicionar uma skill nova no frontend, adicionar também em
+  `VALID_SKILL_IDS` no backend.
+- **Upload real de imagem (MIME de verdade, não só extensão)**: além de
+  checar o `content_type` enviado pelo navegador (que pode ser
+  forjado), tentamos abrir o arquivo com Pillow (`Image.open(...).verify()`)
+  — se não for uma imagem de verdade, rejeita. Isso está implementado no
+  endpoint, mas só será testado de fato na Etapa 8 (painel admin), que é
+  quem vai efetivamente enviar arquivos.
+- Como o `CONTENT.md` não tinha projetos preenchidos, os 4 projetos do
+  seed são os placeholders sugeridos em `docs/backend/seed.md`
+  ("Sistema de Gestão X", "API de Autenticação Y", "CLI de Automação Z",
+  "Bot de Discord W"), com `github_url`/`demo_url` deixados como `null`
+  (não inventamos links). **Pendência pro usuário:** trocar esses 4
+  projetos pelos reais, pelo painel `/admin` (Etapa 8) ou editando o
+  `CONTENT.md` e rodando o seed de novo.
