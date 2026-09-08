@@ -22,6 +22,8 @@
   --color-danger: #f87171;
   --color-text: #e2e8f0;
   --color-text-dim: #7d93ad;
+  /* não definido em docs/estilo/tokens.md; decorativo (bolinha de terminal), mesmo valor nos 2 temas */
+  --color-warning: #fbbf24;
   --glow: 0 0 8px color-mix(in srgb, var(--color-primary) 60%, transparent);
 }
 
@@ -61,6 +63,16 @@ body {
 
 h1, h2, h3, h4, .font-terminal {
   font-family: var(--font-mono);
+}
+
+@keyframes blink {
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink {
+  animation: blink 1s steps(2) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

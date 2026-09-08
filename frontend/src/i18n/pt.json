@@ -7,7 +7,12 @@
     "contact": "contato"
   },
   "hero": {
-    "terminal": { "lines": [] },
+    "terminal": {
+      "lines": [
+        { "cmd": "whoami", "output": "matheus Casarin — Desenvolvedor Fullstack & Cybersecurity" },
+        { "cmd": "ls ./skills", "output": "python typescript javascript fastapi sqlite docker git linux" }
+      ]
+    },
     "cta": { "cv": "baixar CV", "linkedin": "LinkedIn", "github": "GitHub" }
   },
   "about": { "heading": "", "text": "" },

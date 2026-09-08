@@ -207,3 +207,83 @@ JSON → `t()` → componente.
   (`/` e `/en/`) usando o roteamento i18n nativo do Astro, em vez de um
   JS que reescreve textos no cliente — mantém tudo estático/SSG e
   `<html lang>` sempre correto por página (exigência da Etapa 9).
+
+## Etapa 3 — Hero com Terminal Animado
+
+**O que foi feito:**
+Construímos a seção principal (`TerminalHero`): um "terminal" com header
+de 3 bolinhas que digita os comandos `whoami` e `ls ./skills` caractere a
+caractere e mostra a resposta, em loop; ao lado, a foto (placeholder SVG,
+já que o usuário ainda não colocou o arquivo real) com borda neon e os
+3 botões (baixar CV, LinkedIn, GitHub) com os links reais do
+`CONTENT.md`.
+
+**Arquivos criados/alterados:**
+- `frontend/src/components/TerminalHero.astro` — componente completo:
+  markup do terminal + foto + CTAs, e o `<script>` que faz a digitação
+- `frontend/src/i18n/pt.json`, `en.json` — `hero.terminal.lines`
+  preenchido com dados reais (skills do `CONTENT.md`: python,
+  typescript, javascript, fastapi, sqlite, docker, git, linux)
+- `frontend/src/styles/global.css` — token `--color-warning` (bolinha
+  amarela do terminal, não previsto em `tokens.md`) e a animação
+  `@keyframes blink` do cursor
+- `frontend/src/pages/index.astro` / `en/index.astro` — trocam o
+  placeholder "hello world" pelo `<TerminalHero />`
+
+**Conceitos explicados:**
+- **`setTimeout` recursivo em vez de `setInterval`**: a cada caractere
+  digitado, a função agenda A SI MESMA de novo com `setTimeout`. Isso é
+  mais fácil de controlar que `setInterval` — dá pra mudar o tempo de
+  espera dependendo da fase (digitando vs. pausado no resultado) e não
+  corre o risco de dois "ticks" se sobreporem.
+- **`data-*` attributes pra passar dados do servidor pro cliente**: o
+  Astro roda no servidor (build time) e não tem acesso direto às
+  variáveis do frontmatter dentro do `<script>` do cliente. A solução é
+  serializar os dados como JSON num atributo `data-lines` do HTML, e o
+  `<script>` (que roda no navegador) lê esse atributo e faz
+  `JSON.parse`.
+- **`prefers-reduced-motion` tratado em dois lugares**: a REGRA GLOBAL
+  no CSS (`* { animation: none }`) já cuida do cursor piscando (que é
+  uma animação CSS pura). Mas o efeito de "digitar" é feito em
+  JavaScript, não CSS — por isso o script também verifica
+  `matchMedia("(prefers-reduced-motion: reduce)")` e, se verdadeiro,
+  já escreve o texto inteiro de uma vez, sem loop.
+- **Fallback de imagem com SVG inline**: em vez de um `<img>` que
+  tentaria carregar um arquivo que não existe (gerando um ícone de
+  imagem quebrada), desenhamos um ícone de pessoa direto em SVG. Fica
+  sempre bonito, nunca "quebra".
+
+**Como testar:**
+1. `cd frontend && npx astro dev --background`
+2. Abrir `http://localhost:4321/` — ver o terminal digitando em loop,
+   foto com anel neon, 3 botões
+3. DevTools → Rendering → emular `prefers-reduced-motion: reduce` →
+   recarregar → texto aparece todo de uma vez, sem digitação nem cursor
+   piscando
+4. Reduzir a janela pra <768px → layout vira 1 coluna (terminal → foto
+   → botões)
+5. Clicar em LinkedIn/GitHub → abrem em nova aba nos links reais do
+   `CONTENT.md`
+6. `npx astro check` e `npm run build` sem erros
+
+**Desafio opcional:**
+Troque a ordem das duas linhas do terminal em `pt.json` (primeiro
+`ls ./skills`, depois `whoami`) e veja o loop mudar sem tocar em nenhum
+código — só no JSON. Isso mostra a separação entre dado (JSON) e
+comportamento (script).
+
+**Decisões tomadas:**
+- Não existe ainda `frontend/public/images/foto-perfil.jpg` nem
+  `frontend/public/cv-matheus.pdf` (o `CONTENT.md` deixou os campos como
+  "coloque o arquivo aqui"). Seguimos exatamente o que
+  `docs/componentes/TerminalHero.md` já previa pra esse caso: fallback
+  de avatar em SVG inline. O botão "baixar CV" já aponta pro caminho
+  certo (`/cv-matheus.pdf`); quando o usuário colocar o PDF ali, o botão
+  passa a funcionar sem nenhuma mudança de código. **Pendência pro
+  usuário:** adicionar `frontend/public/images/foto-perfil.jpg` e
+  `frontend/public/cv-matheus.pdf`.
+- `docs/estilo/tokens.md` não define uma cor pra bolinha amarela do
+  terminal (só bg/surface/border/primary/accent/success/danger/text).
+  Criamos `--color-warning` com o mesmo valor (âmbar) nos dois temas,
+  já que é um elemento decorativo fixo (imita macOS), não uma cor
+  semântica que precise mudar entre dark/light.

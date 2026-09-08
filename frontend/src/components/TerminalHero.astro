@@ -1,0 +1,128 @@
+---
+import { languages, useTranslations, type Lang } from "../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const lines = languages[lang].hero.terminal.lines;
+
+const LINKEDIN_URL = "https://www.linkedin.com/in/matheuscasarin";
+const GITHUB_URL = "https://github.com/matheusjose04";
+const CV_URL = "/cv-matheus.pdf";
+---
+
+<section class="mx-auto max-w-6xl px-4 py-16 md:py-24">
+  <div class="grid gap-10 md:grid-cols-2 md:items-center">
+    <div
+      class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]"
+      style="box-shadow: var(--glow);"
+    >
+      <div class="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-2">
+        <span class="h-3 w-3 rounded-full bg-[var(--color-danger)]"></span>
+        <span class="h-3 w-3 rounded-full bg-[var(--color-warning)]"></span>
+        <span class="h-3 w-3 rounded-full bg-[var(--color-success)]"></span>
+      </div>
+      <pre
+        id="terminal-body"
+        class="min-h-40 whitespace-pre-wrap p-4 font-mono text-[13px] text-[var(--color-text)] md:text-[15px]"
+      ><span id="terminal-text" data-lines={JSON.stringify(lines)} data-static-lines={JSON.stringify(
+        lines.map((l) => `matheus@fullstack:~$ ${l.cmd}\n> ${l.output}`).join("\n\n")
+      )}></span><span class="cursor-blink" aria-hidden="true">▋</span></pre>
+    </div>
+
+    <div class="flex flex-col items-center gap-6 md:items-start">
+      <div class="grid h-[180px] w-[180px] place-items-center rounded-full border-[3px] border-[var(--color-primary)] bg-[var(--color-bg-soft)] transition-shadow hover:shadow-[var(--glow)]">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="88" height="88" fill="none" stroke="var(--color-primary)" stroke-width="1.5">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+        </svg>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-3 md:justify-start">
+        <a
+          href={CV_URL}
+          download
+          class="rounded border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 font-mono text-sm text-[var(--color-bg)] transition hover:opacity-90"
+          style="box-shadow: var(--glow);"
+        >{t("hero.cta.cv")}</a>
+        <a
+          href={LINKEDIN_URL}
+          target="_blank"
+          rel="noopener"
+          class="rounded border border-[var(--color-border)] px-4 py-2 font-mono text-sm text-[var(--color-text)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+        >{t("hero.cta.linkedin")}</a>
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noopener"
+          class="rounded border border-[var(--color-border)] px-4 py-2 font-mono text-sm text-[var(--color-text)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+        >{t("hero.cta.github")}</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  interface TerminalLine {
+    cmd: string;
+    output: string;
+  }
+
+  const PROMPT = "matheus@fullstack:~$ ";
+  const textEl = document.getElementById("terminal-text");
+  if (textEl) {
+    const linesRaw = textEl.dataset.lines;
+    const staticText = textEl.dataset.staticLines ?? "";
+    const lines: TerminalLine[] = linesRaw ? JSON.parse(linesRaw) : [];
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reduced || lines.length === 0) {
+      textEl.textContent = staticText;
+    } else {
+      let text = "";
+      let lineIndex = 0;
+      let charIndex = 0;
+      let phase: "cmd" | "output" = "cmd";
+
+      const tick = (): void => {
+        if (lineIndex >= lines.length) {
+          window.setTimeout(() => {
+            text = "";
+            lineIndex = 0;
+            charIndex = 0;
+            phase = "cmd";
+            tick();
+          }, 8000);
+          return;
+        }
+
+        const line = lines[lineIndex];
+        if (phase === "cmd") {
+          const full = PROMPT + line.cmd;
+          if (charIndex < full.length) {
+            text += full[charIndex];
+            charIndex += 1;
+            textEl.textContent = text;
+            window.setTimeout(tick, 50);
+            return;
+          }
+          phase = "output";
+          window.setTimeout(tick, 300);
+          return;
+        }
+
+        text += `\n> ${line.output}\n\n`;
+        textEl.textContent = text;
+        lineIndex += 1;
+        charIndex = 0;
+        phase = "cmd";
+        window.setTimeout(tick, 400);
+      };
+
+      tick();
+    }
+  }
+</script>
