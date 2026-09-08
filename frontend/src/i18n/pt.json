@@ -15,7 +15,15 @@
     },
     "cta": { "cv": "baixar CV", "linkedin": "LinkedIn", "github": "GitHub" }
   },
-  "about": { "heading": "", "text": "" },
+  "about": {
+    "heading": "~# sobre",
+    "text": "Sou estudante de Ciência da Computação no UniMAX (Indaiatuba/SP), atualmente no 6º semestre. Meu foco tem sido desenvolvimento fullstack — trabalho com Python, Java, C++, FastAPI, TypeScript e SQL — e venho me aprofundando por conta própria em cybersecurity, explorando ferramentas como Kali Linux, Sherlock, Maigret e PhoneInfoga. Já apliquei esse conhecimento em projetos próprios e acadêmicos, como um sistema de autenticação multifator com reconhecimento facial e de voz e um sistema de rotas multimodais de transporte.\n\nEstou em busca de uma oportunidade de estágio onde eu possa aplicar essas habilidades na prática, continuar aprendendo com profissionais da área e, no futuro, seguir carreira voltada para segurança da informação.",
+    "decoration": {
+      "comment": "// quem sou eu",
+      "foco": "fullstack + cybersecurity",
+      "formacao": "Ciência da Computação — UniMAX (6º semestre)"
+    }
+  },
   "skills": {
     "heading": "",
     "categories": {

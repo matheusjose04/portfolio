@@ -1,0 +1,36 @@
+---
+import { useTranslations, type Lang } from "../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const paragraphs = t("about.text").split("\n\n");
+---
+
+<section id="sobre" class="mx-auto max-w-6xl px-4 py-16 md:py-24">
+  <h2 class="mb-8 font-mono text-2xl text-[var(--color-primary)]">{t("about.heading")}</h2>
+  <div class="grid gap-10 md:grid-cols-2 md:items-start">
+    <div class="space-y-4 leading-relaxed text-[var(--color-text)]">
+      {paragraphs.map((paragraph) => (
+        <p>{paragraph}</p>
+      ))}
+    </div>
+
+    <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 font-mono text-sm leading-relaxed">
+      <p class="text-[var(--color-text-dim)]">{t("about.decoration.comment")}</p>
+      <p class="text-[var(--color-text)]">
+        <span class="text-[var(--color-accent)]">const</span> dev = {"{"}
+      </p>
+      <p class="pl-4 text-[var(--color-text)]">
+        foco: <span class="text-[var(--color-primary)]">"{t("about.decoration.foco")}"</span>,
+      </p>
+      <p class="pl-4 text-[var(--color-text)]">
+        formacao: <span class="text-[var(--color-primary)]">"{t("about.decoration.formacao")}"</span>,
+      </p>
+      <p class="text-[var(--color-text)]">{"}"};</p>
+    </div>
+  </div>
+</section>

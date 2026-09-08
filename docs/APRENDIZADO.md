@@ -287,3 +287,56 @@ comportamento (script).
   Criamos `--color-warning` com o mesmo valor (âmbar) nos dois temas,
   já que é um elemento decorativo fixo (imita macOS), não uma cor
   semântica que precise mudar entre dark/light.
+
+## Etapa 4 — Seção Sobre
+
+**O que foi feito:**
+Criamos a seção "Sobre" com o texto EXATO que o usuário escreveu no
+`CONTENT.md` (nada inventado), heading em estilo terminal (`~# sobre` /
+`~# about`), e um bloco de código decorativo (`// quem sou eu`) ao lado,
+mostrando foco e formação — também só com dados que já estavam no
+`CONTENT.md`.
+
+**Arquivos criados/alterados:**
+- `frontend/src/components/About.astro` — seção com `id="sobre"`
+  (âncora da navbar), texto em 2 parágrafos + bloco de código decorativo
+- `frontend/src/i18n/pt.json`, `en.json` — chave `about.text` com o
+  texto do usuário (PT) e uma tradução fiel pro inglês (o `CONTENT.md`
+  deixou o campo EN vazio e autorizou explicitamente: "deixe vazio que
+  ele traduz"); `about.decoration.*` com foco/formação
+- `frontend/src/pages/index.astro` / `en/index.astro` — adicionam
+  `<About lang={...} />` depois do hero
+
+**Conceitos explicados:**
+- **`split("\n\n")` pra parágrafos**: guardamos o texto inteiro numa
+  única string no JSON (mais fácil de manter que um array), com `\n\n`
+  marcando onde um parágrafo termina e outro começa. No componente,
+  `.split("\n\n")` transforma essa string em uma lista, e
+  `.map()` gera um `<p>` pra cada parágrafo.
+- **Por que a âncora `id="sobre"` não muda de idioma**: o link da navbar
+  aponta sempre pra `#sobre` (fixo), mesmo na versão `/en/`. Isso é uma
+  escolha proposital: a ROTA da página muda (`/` vs `/en/`), mas a
+  ESTRUTURA da página (os ids das seções) fica igual — assim o mesmo
+  componente `Navbar` funciona sem precisar de um mapa de tradução de
+  âncoras.
+
+**Como testar:**
+1. `cd frontend && npx astro dev --background`
+2. `http://localhost:4321/#sobre` → heading `~# sobre`, texto em 2
+   parágrafos à esquerda, bloco de código à direita (desktop) — testado
+   visualmente, confere
+3. `http://localhost:4321/en/#sobre` → mesmo conteúdo em inglês,
+   heading `~# about` — testado, confere
+4. Redimensionar <768px → 1 coluna (texto acima do bloco decorativo) —
+   testado, confere
+5. `npx astro check` e `npm run build` sem erros
+
+**Desafio opcional:**
+Compare `about.text` no `pt.json` com o texto original no `CONTENT.md`,
+frase por frase — é assim que você confirma (e qualquer revisor externo
+também consegue confirmar) que o "modo ensino" não inventou nada sobre
+você.
+
+**Decisões tomadas:**
+- Nenhuma pendência nova nesta etapa — tudo que aparece na seção Sobre
+  veio direto do `CONTENT.md`.
