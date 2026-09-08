@@ -21,7 +21,9 @@ const { title, lang = "pt" } = Astro.props;
       const stored = localStorage.getItem("theme");
       const theme = stored === "light" || stored === "dark"
         ? stored
-        : "dark"; // dark é o padrão do site (regra do MASTER_PROMPT)
+        : window.matchMedia("(prefers-color-scheme: light)").matches
+          ? "light"
+          : "dark"; // sem preferência salva/OS clara → dark é o padrão do site
       document.documentElement.dataset.theme = theme;
     </script>
   </head>

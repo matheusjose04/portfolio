@@ -39,6 +39,18 @@
   --glow: none;
 }
 
+:root {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   background: var(--color-bg);
@@ -52,6 +64,10 @@ h1, h2, h3, h4, .font-terminal {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   * {
     animation: none !important;
     transition: none !important;

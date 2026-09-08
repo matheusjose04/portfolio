@@ -1,0 +1,104 @@
+---
+import { getRelativeLocaleUrl } from "astro:i18n";
+import ThemeToggle from "./ThemeToggle.astro";
+import { useTranslations, type Lang } from "../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const links: Array<{ href: string; label: string }> = [
+  { href: "#sobre", label: t("nav.about") },
+  { href: "#skills", label: t("nav.skills") },
+  { href: "#projetos", label: t("nav.projects") },
+  { href: "#contato", label: t("nav.contact") },
+];
+
+const homeHref = getRelativeLocaleUrl(lang, "/");
+const ptHref = getRelativeLocaleUrl("pt", "/");
+const enHref = getRelativeLocaleUrl("en", "/");
+---
+
+<header class="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/90 backdrop-blur">
+  <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+    <a href={homeHref} class="font-mono text-sm text-[var(--color-primary)] whitespace-nowrap">
+      matheus@fullstack:~$
+    </a>
+
+    <nav id="primary-nav" class="hidden md:flex" aria-label="Principal">
+      <ul class="fixed inset-0 z-40 flex flex-col items-center justify-center gap-8 bg-[var(--color-bg)] text-lg md:static md:flex-row md:gap-6 md:bg-transparent md:text-sm">
+        {links.map((link) => (
+          <li>
+            <a href={link.href} class="font-mono text-[var(--color-text)] hover:text-[var(--color-primary)]">
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1 font-mono text-xs text-[var(--color-text-dim)]">
+        <a
+          href={ptHref}
+          aria-current={lang === "pt" ? "page" : undefined}
+          class:list={["px-1", lang === "pt" && "text-[var(--color-primary)]"]}
+        >pt</a>
+        <span>/</span>
+        <a
+          href={enHref}
+          aria-current={lang === "en" ? "page" : undefined}
+          class:list={["px-1", lang === "en" && "text-[var(--color-primary)]"]}
+        >en</a>
+      </div>
+
+      <ThemeToggle />
+
+      <button
+        id="nav-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="primary-nav"
+        aria-label="Abrir menu"
+        class="grid h-9 w-9 place-items-center rounded border border-[var(--color-border)] text-[var(--color-text)] md:hidden"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M3 12h18M3 18h18" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<script>
+  const toggle = document.getElementById("nav-toggle");
+  const nav = document.getElementById("primary-nav");
+
+  function closeMenu(): void {
+    if (!nav || !toggle) return;
+    nav.classList.add("hidden");
+    nav.classList.remove("flex");
+    toggle.setAttribute("aria-expanded", "false");
+  }
+
+  function openMenu(): void {
+    if (!nav || !toggle) return;
+    nav.classList.remove("hidden");
+    nav.classList.add("flex");
+    toggle.setAttribute("aria-expanded", "true");
+  }
+
+  toggle?.addEventListener("click", () => {
+    const isOpen = toggle.getAttribute("aria-expanded") === "true";
+    isOpen ? closeMenu() : openMenu();
+  });
+
+  nav?.querySelectorAll("a").forEach((a) => a.addEventListener("click", closeMenu));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+</script>

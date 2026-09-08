@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "home": "home",
+    "about": "about",
+    "skills": "skills",
+    "projects": "projects",
+    "contact": "contact"
+  },
+  "hero": {
+    "terminal": { "lines": [] },
+    "cta": { "cv": "download CV", "linkedin": "LinkedIn", "github": "GitHub" }
+  },
+  "about": { "heading": "", "text": "" },
+  "skills": {
+    "heading": "",
+    "categories": {
+      "languages": "",
+      "databases": "",
+      "frameworks": "",
+      "tools": ""
+    },
+    "modal": { "level": "", "projectsLink": "" }
+  },
+  "projects": {
+    "heading": "",
+    "tabs": { "complete": "", "small": "" },
+    "empty": "",
+    "modal": { "why": "", "skillsUsed": "", "demo": "", "github": "" }
+  },
+  "contact": { "heading": "", "text": "", "email": "" },
+  "footer": { "rights": "", "exit": "" },
+  "admin": { "login": "", "logout": "", "newProject": "", "save": "", "delete": "" }
+}

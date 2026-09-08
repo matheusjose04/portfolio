@@ -102,3 +102,108 @@ placeholder mudar — isso mostra o poder de centralizar cores em variáveis.
 - A seção "Projetos" do `CONTENT.md` está vazia. Isso só afeta a Etapa 6
   (seed do backend) — vamos usar 4 projetos placeholder marcados como
   TODO nessa etapa, não nesta.
+
+## Etapa 2 — Navbar
+
+**O que foi feito:**
+Criamos a navbar (logo em estilo terminal, links âncora para as seções
+futuras, toggle de tema e seletor PT/EN) e montamos toda a base de i18n
+necessária pra ela funcionar: rotas `/` (PT) e `/en/` (EN) via i18n
+nativo do Astro, arquivos `pt.json`/`en.json` e um helper `t()`
+type-safe. O menu mobile vira tela cheia com um botão hambúrguer.
+
+**Arquivos criados/alterados:**
+- `frontend/astro.config.mjs` — adiciona `i18n` (locale padrão `pt` sem
+  prefixo, `en` com prefixo `/en/`)
+- `frontend/src/i18n/pt.json`, `en.json` — chaves de tradução (schema de
+  `docs/dados/i18n-chaves.md`); só `nav.*` e `hero.cta.*` preenchidos por
+  enquanto, o resto será preenchido pelas próximas etapas
+- `frontend/src/i18n/utils.ts` — `getLangFromUrl()` e `useTranslations()`
+  (lookup de chave tipo `"nav.about"` sem usar `any`)
+- `frontend/src/components/ThemeToggle.astro` — botão sol/lua que troca
+  `data-theme` e persiste no `localStorage`
+- `frontend/src/components/Navbar.astro` — logo, links, seletor de
+  idioma, `<ThemeToggle />` e botão hambúrguer com menu fullscreen mobile
+- `frontend/src/layouts/Base.astro` — script anti-flash agora também
+  respeita `prefers-color-scheme` quando não há tema salvo
+- `frontend/src/styles/global.css` — `color-scheme` sincronizado com o
+  tema e `scroll-behavior: smooth` (com fallback `auto` em
+  `prefers-reduced-motion`)
+- `frontend/src/pages/index.astro` — agora renderiza `<Navbar lang="pt" />`
+- `frontend/src/pages/en/index.astro` — versão EN da home (mesma
+  estrutura, `lang="en"`)
+
+**Conceitos explicados:**
+- **i18n com rotas por prefixo**: o Astro pode gerar `/` para o idioma
+  padrão e `/en/` para os outros automaticamente, a partir de uma pasta
+  `src/pages/en/`. É como ter duas "cópias" do site, uma por idioma —
+  mas nós reaproveitamos os MESMOS componentes (`Navbar`, `Base`),
+  só trocando qual idioma (`lang`) é passado como propriedade.
+- **Helper de tradução `t("nav.about")`**: em vez de escrever o texto
+  direto no componente (`<a>Sobre</a>`), escrevemos `t("nav.about")`.
+  A função `t` vai no JSON do idioma atual, desce pelas chaves separadas
+  por ponto (`nav` → `about`) e devolve o texto. Isso permite trocar
+  idioma sem duplicar componentes.
+- **Menu hambúrguer sem framework**: usamos classes Tailwind
+  (`hidden md:flex` no menu, `md:hidden` no botão) pra esconder/mostrar
+  conforme o tamanho de tela, e um `<script>` pequeno que só troca
+  classes (`hidden`/`flex`) e o atributo `aria-expanded` — sem precisar
+  de nenhuma biblioteca de UI.
+- **`aria-expanded` e `aria-controls`**: são atributos de acessibilidade.
+  `aria-expanded="true/false"` avisa leitores de tela se o menu está
+  aberto; `aria-controls="primary-nav"` diz qual elemento aquele botão
+  controla. Fechar o menu com a tecla `Esc` também é uma prática comum de
+  acessibilidade pra modais/menus.
+
+**Código-chave comentado (`src/i18n/utils.ts`, lookup de chave):**
+```ts
+function get(dict: Record<string, unknown>, path: string): string {
+  let current: unknown = dict;
+  for (const part of path.split(".")) {
+    // se não for mais um objeto (ex: já virou string, ou não existe),
+    // devolve a própria chave como fallback — fácil de notar no site
+    // que uma tradução está faltando.
+    if (typeof current !== "object" || current === null || Array.isArray(current)) {
+      return path;
+    }
+    current = (current as Record<string, unknown>)[part];
+  }
+  return typeof current === "string" ? current : path;
+}
+```
+
+**Como testar:**
+1. `cd frontend && npx astro dev --background`
+2. Em `http://localhost:4321/`: navbar em PT, clicar no toggle de tema
+   alterna claro/escuro instantaneamente
+3. Clicar em "en" na navbar → vai para `/en/` com os links traduzidos
+   (home/about/skills/projects/contact) e o tema permanece o mesmo
+4. Recarregar a página com `theme=light` no localStorage → sem flash
+5. Reduzir a largura da janela abaixo de 768px (DevTools → toggle
+   device toolbar) → os links somem, aparece o ícone de hambúrguer;
+   clicar nele abre um menu em tela cheia
+6. `npx astro check` → 0 erros
+7. `npx astro dev stop`
+
+**Desafio opcional:**
+Adicione uma chave nova em `pt.json`/`en.json` (ex: `"nav.blog": "blog"`
+e a versão EN) e use `t("nav.blog")` num link temporário na navbar. Isso
+mostra como qualquer texto novo do site sempre passa pelo mesmo caminho:
+JSON → `t()` → componente.
+
+**Decisões tomadas:**
+- `docs/componentes/Navbar.md` também está ausente do pacote (só existe
+  `docs/etapas/02-navbar.md`, que aponta pra ele). Usamos
+  `docs/estilo/responsividade.md` (regra "hambúrguer/fullscreen no
+  mobile, links inline no desktop") e os testes de aceite da própria
+  etapa como especificação.
+- `docs/componentes/ThemeToggle.md` exige que, sem tema salvo no
+  `localStorage`, o site abra no tema do sistema operacional. Isso é
+  mais específico que a frase geral do `MASTER_PROMPT.md` ("dark é o
+  padrão") — interpretamos que dark continua sendo o padrão quando o SO
+  não indica claramente "light" (ou seja, SO escuro ou sem preferência
+  → dark; SO claro → light).
+- Optamos por implementar a troca de idioma como duas páginas raiz
+  (`/` e `/en/`) usando o roteamento i18n nativo do Astro, em vez de um
+  JS que reescreve textos no cliente — mantém tudo estático/SSG e
+  `<html lang>` sempre correto por página (exigência da Etapa 9).
