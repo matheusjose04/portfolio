@@ -28,7 +28,7 @@ const enHref = getRelativeLocaleUrl("en", "/");
       matheus@fullstack:~$
     </a>
 
-    <nav id="primary-nav" class="hidden md:flex" aria-label="Principal">
+    <nav id="primary-nav" class="hidden md:flex" aria-label={t("a11y.primaryNav")}>
       <ul class="fixed inset-0 z-40 flex flex-col items-center justify-center gap-8 bg-[var(--color-bg)] text-lg md:static md:flex-row md:gap-6 md:bg-transparent md:text-sm">
         {links.map((link) => (
           <li>
@@ -43,26 +43,28 @@ const enHref = getRelativeLocaleUrl("en", "/");
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-1 font-mono text-xs text-[var(--color-text-dim)]">
         <a
+          id="lang-pt"
           href={ptHref}
           aria-current={lang === "pt" ? "page" : undefined}
           class:list={["px-1", lang === "pt" && "text-[var(--color-primary)]"]}
         >pt</a>
         <span>/</span>
         <a
+          id="lang-en"
           href={enHref}
           aria-current={lang === "en" ? "page" : undefined}
           class:list={["px-1", lang === "en" && "text-[var(--color-primary)]"]}
         >en</a>
       </div>
 
-      <ThemeToggle />
+      <ThemeToggle lang={lang} />
 
       <button
         id="nav-toggle"
         type="button"
         aria-expanded="false"
         aria-controls="primary-nav"
-        aria-label="Abrir menu"
+        aria-label={t("a11y.openMenu")}
         class="grid h-9 w-9 place-items-center rounded border border-[var(--color-border)] text-[var(--color-text)] md:hidden"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -100,5 +102,12 @@ const enHref = getRelativeLocaleUrl("en", "/");
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeMenu();
+  });
+
+  document.getElementById("lang-pt")?.addEventListener("click", () => {
+    localStorage.setItem("lang", "pt");
+  });
+  document.getElementById("lang-en")?.addEventListener("click", () => {
+    localStorage.setItem("lang", "en");
   });
 </script>

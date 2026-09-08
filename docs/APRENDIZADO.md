@@ -702,3 +702,99 @@ excluir algo). Isso mostra na prática onde mora esse "crachá" de sessão.
 - Mantivemos o painel admin só em português (sem `/en/admin`) — é uma
   ferramenta interna de uso pessoal, não uma página pro público; o
   `MASTER_PROMPT.md` não exige i18n pro admin.
+
+## Etapa 9 — Internacionalização PT/EN
+
+**O que foi feito:**
+As seções principais (navbar, hero, sobre, skills, projetos) já vinham
+recebendo a prop `lang` e lendo textos via `t()` desde as etapas
+anteriores — então a maior parte da Etapa 9 já estava pronta. Faltavam
+dois pontos exigidos pelo checklist de `docs/etapas/09-i18n.md`: (1) um
+punhado de textos de acessibilidade (`aria-label`) que ficaram
+hardcoded em português mesmo dentro de componentes usados na versão
+`/en/`, e (2) o idioma escolhido não "grudava" — ao voltar pra raiz
+(`/`) depois de ter navegado pra `/en/`, o site sempre reabria em
+português. Resolvemos os dois.
+
+**Arquivos criados/alterados:**
+- `frontend/src/i18n/pt.json`, `en.json` — novo grupo de chaves `a11y`
+  (`primaryNav`, `openMenu`, `close`, `themeToggle`, `skillsCategories`,
+  `projectsCategories`) pros textos de acessibilidade que faltavam
+- `frontend/src/components/Navbar.astro` — troca os `aria-label`
+  hardcoded por `t("a11y...")`; os links `pt`/`en` ganharam `id` e um
+  listener que grava a escolha em `localStorage.lang`; passa `lang` pro
+  `ThemeToggle`
+- `frontend/src/components/ThemeToggle.astro` — antes não recebia
+  `lang` nenhum (por isso o botão de tema sempre falava português,
+  mesmo em `/en/`); agora aceita a prop e traduz o `aria-label`
+- `frontend/src/components/ProjectsGrid.astro`,
+  `frontend/src/components/Skills.astro` — `aria-label` dos
+  tablists de categoria e dos botões "fechar" dos modais, traduzidos
+- `frontend/src/layouts/Base.astro` — novo `<script>` inline no
+  `<head>` que redireciona `/` → `/en/` quando `localStorage.lang`
+  guarda `"en"`
+
+**Conceitos explicados:**
+- **`aria-label` também é texto do produto**: é fácil esquecer, porque
+  não aparece na tela — só leitores de tela o anunciam. Mas pra quem
+  usa um leitor de tela em inglês navegando `/en/`, ouvir "Fechar" ou
+  "Abrir menu" em português é tão errado quanto um botão visível com
+  texto errado. Por isso o checklist da etapa pede "nenhuma string
+  visível hardcoded" — "visível" aqui inclui o que é visível pra
+  tecnologias assistivas, não só pro olho.
+- **Persistência de idioma num site 100% estático**: como o site é
+  gerado como arquivos HTML estáticos (`output: "static"`, sem servidor
+  Node por trás), não existe um jeito de o SERVIDOR lembrar "esse
+  visitante prefere inglês" — cada página é um arquivo fixo. A solução
+  é client-side: ao clicar em `en`, gravamos `localStorage.lang = "en"`
+  ANTES de navegar; depois, um script bem no início do `<head>` de toda
+  página checa esse valor e, se a página atual for a raiz em português
+  E o valor salvo for `"en"`, troca a URL pra `/en/` com
+  `location.replace()` (que não deixa a página em português no
+  histórico do navegador, então o botão "voltar" não fica preso num
+  loop de redirecionamento).
+- **Por que o redirect só mexe em `location.pathname === "/"`**: o
+  layout `Base.astro` é reaproveitado também pelo painel `/admin/*`
+  (sempre em português, por decisão da Etapa 8). Se o redirect checasse
+  só a prop `lang === "pt"`, ele dispararia TAMBÉM dentro do admin
+  sempre que o visitante tivesse navegado o site público em inglês
+  antes — te jogando pra fora do painel administrativo sem motivo.
+  Restringir ao caminho exato `/` deixa o comportamento só na home
+  pública, sem tocar em nada dentro de `/admin`.
+
+**Como testar:**
+1. `astro dev --background` e abrir `http://localhost:4321/`
+2. No DevTools → Console, rodar `localStorage.setItem('lang','en')` e
+   recarregar a raiz (`/`) → redireciona sozinho pra `/en/` — testei e
+   confere
+3. Com esse mesmo `localStorage.lang = "en"`, abrir
+   `http://localhost:4321/admin/login` → continua em português, SEM
+   redirecionar — testei e confere (é exatamente o bug que o
+   `pathname === "/"` evita)
+4. Limpar o `localStorage`, voltar pra `/`, clicar no link `en` da
+   navbar → navega pra `/en/` E grava a preferência (dá pra conferir
+   com `localStorage.getItem('lang')` no console) — testei e confere
+5. `npx astro build` gera `dist/index.html` e `dist/en/index.html`;
+   rodei `grep aria-label` nos dois e confirmei que cada um só tem os
+   textos no idioma certo (`"Fechar"`/`"Close"`,
+   `"Abrir menu"`/`"Open menu"`, etc.)
+6. `npx astro check` → 0 erros
+
+**Desafio opcional:**
+Abra o DevTools → Application → Local Storage em `/`, apague a chave
+`lang` e recarregue: repare que, sem preferência salva, o site sempre
+abre em português (o padrão do `Base.astro`). Depois tente pensar: se
+o projeto um dia ganhasse mais páginas além da home (não só `/` e
+`/en/`), como você mudaria a checagem `location.pathname === "/"` pra
+continuar funcionando sem também afetar o `/admin`?
+
+**Decisões tomadas:**
+- **Sem tradução das chaves `contact`, `footer` e `admin` em
+  `pt.json`/`en.json`**: elas já existem como "esqueleto" (valores
+  vazios) desde que a estrutura de chaves foi definida em
+  `docs/dados/i18n-chaves.md`, mas os componentes que vão usá-las
+  (`Footer`, com a seção de contato embutida) ainda não foram
+  construídos — isso é trabalho da Etapa 10 (polimento), que é onde
+  `docs/componentes/Footer.md` é referenciado. Preencher essas chaves
+  agora, sem componente nenhum lendo elas, violaria a regra de não
+  adicionar código/dado que não está sendo usado ainda.

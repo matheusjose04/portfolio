@@ -17,6 +17,14 @@ const { title, lang = "pt" } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <script is:inline>
+      // Se veio antes pra raiz ("/") e escolheu EN, manda pra /en/ direto.
+      // Restrito à raiz pública: nunca mexe em /admin/* (sempre pt) nem em /en/
+      // (que "força" EN só por o usuário ter navegado até lá, sem redirect de volta).
+      if (location.pathname === "/" && localStorage.getItem("lang") === "en") {
+        location.replace("/en/");
+      }
+    </script>
+    <script is:inline>
       // Roda antes do primeiro paint: evita "flash" do tema errado no reload.
       const stored = localStorage.getItem("theme");
       const theme = stored === "light" || stored === "dark"

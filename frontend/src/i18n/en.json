@@ -50,5 +50,13 @@
   },
   "contact": { "heading": "", "text": "", "email": "" },
   "footer": { "rights": "", "exit": "" },
-  "admin": { "login": "", "logout": "", "newProject": "", "save": "", "delete": "" }
+  "admin": { "login": "", "logout": "", "newProject": "", "save": "", "delete": "" },
+  "a11y": {
+    "primaryNav": "Primary",
+    "openMenu": "Open menu",
+    "close": "Close",
+    "themeToggle": "Toggle light/dark theme",
+    "skillsCategories": "skills categories",
+    "projectsCategories": "projects categories"
+  }
 }

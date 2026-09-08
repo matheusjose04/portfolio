@@ -15,7 +15,7 @@ const t = useTranslations(lang);
   <div
     class="mb-6 flex flex-wrap gap-2"
     role="tablist"
-    aria-label="projects categories"
+    aria-label={t("a11y.projectsCategories")}
     data-lang={lang}
     data-error-text={t("projects.error")}
     data-empty-text={t("projects.empty")}
@@ -70,7 +70,7 @@ const t = useTranslations(lang);
         <button
           id="project-modal-close"
           type="button"
-          aria-label="Fechar"
+          aria-label={t("a11y.close")}
           class="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded border border-[var(--color-border)] bg-[var(--color-bg)]/80 text-[var(--color-text)] hover:border-[var(--color-primary)]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
