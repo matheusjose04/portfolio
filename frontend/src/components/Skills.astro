@@ -1,5 +1,5 @@
 ---
-import { skills, type SkillCategory } from "../data/skills";
+import { skills as staticSkills, type SkillCategory } from "../data/skills";
 import { useTranslations, type Lang } from "../i18n/utils";
 
 interface Props {
@@ -33,29 +33,18 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
     ))}
   </div>
 
-  <div id="skills-grid" class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
-    {skills.map((s) => (
-      <button
-        type="button"
-        class="skill-card flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-center transition hover:-translate-y-1 hover:border-[var(--color-primary)] hover:shadow-[var(--glow)]"
-        data-category={s.category}
-        data-skill-id={s.id}
-        data-skill={JSON.stringify(s)}
-      >
-        <i class={`${s.icon} text-3xl`} aria-hidden="true"></i>
-        <span class="font-mono text-sm text-[var(--color-text)]">{s.name}</span>
-        <span class="h-1 w-full overflow-hidden rounded-full bg-[var(--color-bg-soft)]">
-          <span class="block h-full rounded-full bg-[var(--color-primary)]" style={`width:${(s.level / 5) * 100}%`}></span>
-        </span>
-      </button>
-    ))}
-  </div>
+  <div
+    id="skills-grid"
+    class="reveal grid gap-4"
+    style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));"
+    data-lang={lang}
+    data-fallback={JSON.stringify(staticSkills)}
+  ></div>
 
   <div
     id="skill-modal-overlay"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4"
     data-open="false"
-    data-lang={lang}
     data-level-prefix={t("skills.modal.level")}
   >
     <div
@@ -67,7 +56,7 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
     >
       <div class="mb-4 flex items-start justify-between gap-4">
         <div class="flex items-center gap-3">
-          <i id="skill-modal-icon" class="text-4xl" aria-hidden="true"></i>
+          <img id="skill-modal-icon" class="h-10 w-10" alt="" />
           <h3 id="skill-modal-title" class="font-mono text-lg text-[var(--color-text)]"></h3>
         </div>
         <button
@@ -100,10 +89,37 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
 </section>
 
 <script>
-  import type { Skill } from "../data/skills";
+  import { devIconSvg } from "../lib/icon-url";
+
+  interface Skill {
+    id: string;
+    category: string;
+    name: string;
+    icon: string;
+    level: number;
+    levelLabel: { pt: string; en: string };
+    summary: { pt: string; en: string };
+    experience: { pt: string; en: string };
+  }
+
+  interface ApiSkill {
+    skill_id: string;
+    category: string;
+    name: string;
+    icon: string;
+    level: number;
+    level_label: { pt: string; en: string };
+    summary: { pt: string; en: string };
+    experience: { pt: string; en: string };
+  }
+
+  const API_BASE = import.meta.env.PUBLIC_API_URL ?? "http://localhost:8000";
+
+  const grid = document.getElementById("skills-grid");
+  const lang = grid?.dataset.lang === "en" ? "en" : "pt";
+  const fallbackSkills: Skill[] = grid?.dataset.fallback ? JSON.parse(grid.dataset.fallback) : [];
 
   const tabs = document.querySelectorAll<HTMLButtonElement>(".skill-tab");
-  const cards = document.querySelectorAll<HTMLButtonElement>(".skill-card");
   const overlay = document.getElementById("skill-modal-overlay");
   const modal = document.getElementById("skill-modal");
   const closeBtn = document.getElementById("skill-modal-close");
@@ -113,45 +129,35 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
   const levelBarEl = document.getElementById("skill-modal-level-bar");
   const summaryEl = document.getElementById("skill-modal-summary");
   const experienceEl = document.getElementById("skill-modal-experience");
-
-  const lang = overlay?.dataset.lang === "en" ? "en" : "pt";
   const levelPrefix = overlay?.dataset.levelPrefix ?? "";
 
   let lastFocused: HTMLElement | null = null;
+  let currentCategory = "languages";
 
-  function filterByCategory(category: string | undefined): void {
-    cards.forEach((card) => {
-      card.style.display = card.dataset.category === category ? "" : "none";
-    });
+  function apiToSkill(s: ApiSkill): Skill {
+    return {
+      id: s.skill_id,
+      category: s.category,
+      name: s.name,
+      icon: s.icon,
+      level: s.level,
+      levelLabel: s.level_label,
+      summary: s.summary,
+      experience: s.experience,
+    };
   }
 
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      tabs.forEach((other) => {
-        const active = other === tab;
-        other.setAttribute("data-active", active ? "true" : "false");
-        other.setAttribute("aria-selected", active ? "true" : "false");
-      });
-      filterByCategory(tab.dataset.category);
-    });
-  });
-
-  const initialTab = document.querySelector<HTMLButtonElement>(".skill-tab[data-active='true']");
-  filterByCategory(initialTab?.dataset.category);
-
-  function openModal(card: HTMLButtonElement): void {
-    const raw = card.dataset.skill;
-    if (!raw || !overlay || !modal || !iconEl || !titleEl || !levelTextEl || !levelBarEl || !summaryEl || !experienceEl) {
+  function openModal(skill: Skill, trigger: HTMLElement): void {
+    if (!overlay || !modal || !iconEl || !titleEl || !levelTextEl || !levelBarEl || !summaryEl || !experienceEl) {
       return;
     }
-    const s = JSON.parse(raw) as Skill;
-    lastFocused = card;
+    lastFocused = trigger;
 
-    iconEl.className = `${s.icon} text-4xl`;
-    titleEl.textContent = s.name;
-    levelTextEl.textContent = `${levelPrefix}: ${s.levelLabel[lang]}`;
-    summaryEl.textContent = s.summary[lang];
-    experienceEl.textContent = s.experience[lang];
+    (iconEl as HTMLImageElement).src = devIconSvg(skill.icon);
+    titleEl.textContent = skill.name;
+    levelTextEl.textContent = `${levelPrefix}: ${skill.levelLabel[lang]}`;
+    summaryEl.textContent = skill.summary[lang];
+    experienceEl.textContent = skill.experience[lang];
 
     overlay.dataset.open = "true";
     overlay.classList.remove("hidden");
@@ -161,7 +167,7 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
     levelBarEl.style.width = "0%";
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        levelBarEl.style.width = `${(s.level / 5) * 100}%`;
+        levelBarEl.style.width = `${(skill.level / 5) * 100}%`;
       });
     });
 
@@ -177,8 +183,54 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
     lastFocused?.focus();
   }
 
-  cards.forEach((card) => {
-    card.addEventListener("click", () => openModal(card));
+  function createCard(skill: Skill): HTMLButtonElement {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className =
+      "skill-card flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-center transition hover:-translate-y-1 hover:border-[var(--color-primary)] hover:shadow-[var(--glow)]";
+    card.dataset.category = skill.category;
+    card.dataset.skillId = skill.id;
+
+    const icon = document.createElement("img");
+    icon.className = "h-8 w-8";
+    icon.src = devIconSvg(skill.icon);
+    icon.alt = "";
+
+    const name = document.createElement("span");
+    name.className = "font-mono text-sm text-[var(--color-text)]";
+    name.textContent = skill.name;
+
+    const barWrap = document.createElement("span");
+    barWrap.className = "h-1 w-full overflow-hidden rounded-full bg-[var(--color-bg-soft)]";
+    const bar = document.createElement("span");
+    bar.className = "block h-full rounded-full bg-[var(--color-primary)]";
+    bar.style.width = `${(skill.level / 5) * 100}%`;
+    barWrap.appendChild(bar);
+
+    card.append(icon, name, barWrap);
+    card.style.display = skill.category === currentCategory ? "" : "none";
+    card.addEventListener("click", () => openModal(skill, card));
+    return card;
+  }
+
+  function renderSkills(list: Skill[]): void {
+    if (!grid) return;
+    grid.innerHTML = "";
+    list.forEach((skill) => grid.appendChild(createCard(skill)));
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((other) => {
+        const active = other === tab;
+        other.setAttribute("data-active", active ? "true" : "false");
+        other.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      currentCategory = tab.dataset.category ?? "languages";
+      document.querySelectorAll<HTMLButtonElement>(".skill-card").forEach((card) => {
+        card.style.display = card.dataset.category === currentCategory ? "" : "none";
+      });
+    });
   });
 
   closeBtn?.addEventListener("click", closeModal);
@@ -228,4 +280,20 @@ const categories: Array<{ id: SkillCategory; label: string }> = [
       card.classList.remove("outline", "outline-2", "outline-[var(--color-primary)]");
     }, 1500);
   });
+
+  async function loadSkills(): Promise<void> {
+    renderSkills(fallbackSkills);
+    try {
+      const res = await fetch(`${API_BASE}/api/skills`);
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const items = (await res.json()) as ApiSkill[];
+      if (items.length > 0) {
+        renderSkills(items.map(apiToSkill));
+      }
+    } catch {
+      // API offline: mantém os cards estáticos já renderizados.
+    }
+  }
+
+  void loadSkills();
 </script>

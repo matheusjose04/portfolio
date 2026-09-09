@@ -12,7 +12,9 @@ from fastapi.testclient import TestClient
 from app.auth import hash_password
 from app.database import Base, SessionLocal, engine
 from app.main import app
-from app.models import AdminUser
+from app.models import AdminUser, Skill
+
+from seed import SKILLS_DEFAULTS
 
 
 @pytest.fixture(autouse=True)
@@ -26,6 +28,8 @@ def _reset_db():
             password_hash=hash_password(os.environ["ADMIN_PASSWORD"]),
         )
     )
+    for index, data in enumerate(SKILLS_DEFAULTS):
+        db.add(Skill(position=index, **data))
     db.commit()
     db.close()
     yield

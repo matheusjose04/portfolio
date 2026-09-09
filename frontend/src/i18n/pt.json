@@ -48,8 +48,12 @@
       "demoUnavailable": "sem demo pública"
     }
   },
-  "contact": { "heading": "", "text": "", "email": "" },
-  "footer": { "rights": "", "exit": "" },
+  "contact": {
+    "heading": "~# contato",
+    "text": "Tem uma vaga de estágio, quer trocar uma ideia sobre cybersecurity ou só bater um papo sobre código? Me chama.",
+    "email": "matheus.casarin.dev@gmail.com"
+  },
+  "footer": { "rights": "Todos os direitos reservados.", "exit": "sessão encerrada" },
   "admin": { "login": "", "logout": "", "newProject": "", "save": "", "delete": "" },
   "a11y": {
     "primaryNav": "Principal",

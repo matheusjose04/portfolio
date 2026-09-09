@@ -14,7 +14,8 @@ const GITHUB_URL = "https://github.com/matheusjose04";
 const CV_URL = "/cv-matheus.pdf";
 ---
 
-<section class="mx-auto max-w-6xl px-4 py-16 md:py-24">
+<section class="relative mx-auto max-w-6xl px-4 py-16 md:py-24" data-lang={lang}>
+  <canvas id="matrix-rain" class="pointer-events-none absolute inset-0 z-10 hidden rounded-lg" aria-hidden="true"></canvas>
   <div class="grid gap-10 md:grid-cols-2 md:items-center">
     <div
       class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]"
@@ -43,18 +44,21 @@ const CV_URL = "/cv-matheus.pdf";
 
       <div class="flex flex-wrap justify-center gap-3 md:justify-start">
         <a
+          id="hero-cv"
           href={CV_URL}
           download
           class="rounded border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 font-mono text-sm text-[var(--color-bg)] transition hover:opacity-90"
           style="box-shadow: var(--glow);"
         >{t("hero.cta.cv")}</a>
         <a
+          id="hero-linkedin"
           href={LINKEDIN_URL}
           target="_blank"
           rel="noopener"
           class="rounded border border-[var(--color-border)] px-4 py-2 font-mono text-sm text-[var(--color-text)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
         >{t("hero.cta.linkedin")}</a>
         <a
+          id="hero-github"
           href={GITHUB_URL}
           target="_blank"
           rel="noopener"
@@ -71,13 +75,58 @@ const CV_URL = "/cv-matheus.pdf";
     output: string;
   }
 
+  interface SiteContent {
+    cv_url: string;
+    linkedin_url: string;
+    github_url: string;
+    hero_lines: TerminalLine[];
+  }
+
+  const API_BASE = import.meta.env.PUBLIC_API_URL ?? "http://localhost:8000";
+  const section = document.querySelector<HTMLElement>("section[data-lang]");
+  const lang = section?.dataset.lang === "en" ? "en" : "pt";
+
+  async function fetchSiteContent(): Promise<SiteContent | null> {
+    try {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 1500);
+      const res = await fetch(`${API_BASE}/api/site-content`, {
+        headers: { "Accept-Language": lang },
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeout);
+      if (!res.ok) return null;
+      return (await res.json()) as SiteContent;
+    } catch {
+      return null;
+    }
+  }
+
+  function applyLinks(content: SiteContent | null): void {
+    if (!content) return;
+    const cv = document.getElementById("hero-cv") as HTMLAnchorElement | null;
+    const linkedin = document.getElementById("hero-linkedin") as HTMLAnchorElement | null;
+    const github = document.getElementById("hero-github") as HTMLAnchorElement | null;
+    if (cv && content.cv_url) cv.href = content.cv_url;
+    if (linkedin && content.linkedin_url) linkedin.href = content.linkedin_url;
+    if (github && content.github_url) github.href = content.github_url;
+  }
+
   const PROMPT = "matheus@fullstack:~$ ";
   const textEl = document.getElementById("terminal-text");
   if (textEl) {
-    const linesRaw = textEl.dataset.lines;
-    const staticText = textEl.dataset.staticLines ?? "";
-    const lines: TerminalLine[] = linesRaw ? JSON.parse(linesRaw) : [];
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    void (async () => {
+      const content = await fetchSiteContent();
+      applyLinks(content);
+
+      const linesRaw = textEl.dataset.lines;
+      const fallbackLines: TerminalLine[] = linesRaw ? JSON.parse(linesRaw) : [];
+      const lines: TerminalLine[] = content?.hero_lines?.length ? content.hero_lines : fallbackLines;
+      const staticText =
+        content?.hero_lines?.length
+          ? lines.map((l) => `${PROMPT}${l.cmd}\n> ${l.output}`).join("\n\n")
+          : textEl.dataset.staticLines ?? "";
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (reduced || lines.length === 0) {
       textEl.textContent = staticText;
@@ -123,6 +172,68 @@ const CV_URL = "/cv-matheus.pdf";
       };
 
       tick();
+      }
+    })();
+  }
+</script>
+
+<script>
+  // Easter egg: código Konami (↑↑↓↓←→←→BA) dispara ~5s de "matrix rain" no hero.
+  const KONAMI = [
+    "ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown",
+    "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight",
+    "b", "a",
+  ];
+  let progress = 0;
+
+  document.addEventListener("keydown", (e) => {
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    progress = key === KONAMI[progress] ? progress + 1 : key === KONAMI[0] ? 1 : 0;
+    if (progress === KONAMI.length) {
+      progress = 0;
+      runMatrixRain();
     }
+  });
+
+  function runMatrixRain(): void {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const canvas = document.getElementById("matrix-rain") as HTMLCanvasElement | null;
+    const section = canvas?.parentElement;
+    if (!canvas || !section) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = section.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    const fontSize = 16;
+    const columns = Math.min(40, Math.floor(canvas.width / fontSize));
+    const chars = "01アイウエオカキクケコサシスセソ";
+    const drops = new Array(columns).fill(0);
+
+    canvas.classList.remove("hidden");
+
+    const interval = window.setInterval(() => {
+      ctx.fillStyle = "rgba(5, 11, 20, 0.15)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = `${fontSize}px monospace`;
+
+      drops.forEach((y, i) => {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const x = i * (canvas.width / columns);
+        ctx.fillText(char, x, y * fontSize);
+        drops[i] = y * fontSize > canvas.height && Math.random() > 0.975 ? 0 : y + 1;
+      });
+    }, 50);
+
+    window.setTimeout(() => {
+      window.clearInterval(interval);
+      canvas.classList.add("hidden");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }, 5000);
   }
 </script>

@@ -28,8 +28,8 @@ const enHref = getRelativeLocaleUrl("en", "/");
       matheus@fullstack:~$
     </a>
 
-    <nav id="primary-nav" class="hidden md:flex" aria-label={t("a11y.primaryNav")}>
-      <ul class="fixed inset-0 z-40 flex flex-col items-center justify-center gap-8 bg-[var(--color-bg)] text-lg md:static md:flex-row md:gap-6 md:bg-transparent md:text-sm">
+    <nav class="hidden md:flex" aria-label={t("a11y.primaryNav")}>
+      <ul class="flex gap-6 text-sm">
         {links.map((link) => (
           <li>
             <a href={link.href} class="font-mono text-[var(--color-text)] hover:text-[var(--color-primary)]">
@@ -63,7 +63,7 @@ const enHref = getRelativeLocaleUrl("en", "/");
         id="nav-toggle"
         type="button"
         aria-expanded="false"
-        aria-controls="primary-nav"
+        aria-controls="mobile-nav"
         aria-label={t("a11y.openMenu")}
         class="grid h-9 w-9 place-items-center rounded border border-[var(--color-border)] text-[var(--color-text)] md:hidden"
       >
@@ -75,9 +75,21 @@ const enHref = getRelativeLocaleUrl("en", "/");
   </div>
 </header>
 
+<nav
+  id="mobile-nav"
+  class="fixed inset-0 z-40 hidden flex-col items-center justify-center gap-8 bg-[var(--color-bg)] text-lg md:hidden"
+  aria-label={t("a11y.primaryNav")}
+>
+  {links.map((link) => (
+    <a href={link.href} class="font-mono text-[var(--color-text)] hover:text-[var(--color-primary)]">
+      {link.label}
+    </a>
+  ))}
+</nav>
+
 <script>
   const toggle = document.getElementById("nav-toggle");
-  const nav = document.getElementById("primary-nav");
+  const nav = document.getElementById("mobile-nav");
 
   function closeMenu(): void {
     if (!nav || !toggle) return;

@@ -5,7 +5,6 @@
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
-@import "devicon/devicon.min.css";
 
 /* Tokens — copiados de docs/estilo/tokens.md (fonte normativa na ausência de UI_SPECS.md) */
 :root {
@@ -76,6 +75,40 @@ h1, h2, h3, h4, .font-terminal {
   animation: blink 1s steps(2) infinite;
 }
 
+/* Reveal on scroll: nativo via animation-timeline quando suportado; nos
+   navegadores sem suporte, um IntersectionObserver adiciona .visible e a
+   transition abaixo faz o mesmo efeito. */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: none;
+}
+
+@supports (animation-timeline: view()) {
+  .reveal {
+    transition: none;
+    animation: reveal-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 30%;
+  }
+
+  @keyframes reveal-in {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -84,5 +117,10 @@ h1, h2, h3, h4, .font-terminal {
   * {
     animation: none !important;
     transition: none !important;
+  }
+
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

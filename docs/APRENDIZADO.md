@@ -798,3 +798,249 @@ continuar funcionando sem também afetar o `/admin`?
   `docs/componentes/Footer.md` é referenciado. Preencher essas chaves
   agora, sem componente nenhum lendo elas, violaria a regra de não
   adicionar código/dado que não está sendo usado ainda.
+
+## Etapa 10 — Polimento e Responsividade
+
+**O que foi feito:**
+Construí o `Footer` (que faltava desde a Etapa 9, deixando o link
+"contato" da navbar apontando pra lugar nenhum), implementei o reveal
+on scroll nativo com fallback, testei os 4 breakpoints obrigatórios
+(360/768/1280/1920) e encontrei um bug real no menu mobile, adicionei
+meta tags OG + sitemap + robots.txt, montei o easter egg do código
+Konami, e rodei o Lighthouse até bater ≥90 nas 4 métricas (isolando um
+problema real de performance — a webfont do devicon).
+
+**Arquivos criados/alterados:**
+- `frontend/src/components/Footer.astro` — novo: contato + copyright +
+  redes sociais + linha `$ exit 0`, com `id="contato"`
+- `frontend/src/styles/global.css` — classe `.reveal` (`animation-timeline:
+  view()` com fallback via `@supports`)
+- `frontend/src/layouts/Base.astro` — `IntersectionObserver` de fallback
+  pro reveal, pra navegadores sem `animation-timeline`
+- `frontend/src/components/Navbar.astro` — o menu mobile virou um `<nav>`
+  fixo FORA do `<header>` (motivo abaixo)
+- `frontend/src/components/TerminalHero.astro` — canvas do easter egg
+  (Konami) + listener de teclado
+- `frontend/astro.config.mjs` — `@astrojs/sitemap` + `site:` (placeholder
+  até a Etapa 11 definir o domínio real)
+- `frontend/src/layouts/Base.astro` — meta tags OG/Twitter/canonical +
+  prop `noindex` (usada nas páginas `/admin/*`)
+- `frontend/public/robots.txt` — novo, bloqueia `/admin`
+- `frontend/src/lib/icon-url.ts`, `frontend/public/icons/devicon/*.svg` —
+  troca da webfont do devicon por SVGs individuais (motivo abaixo)
+
+**Conceitos explicados:**
+- **`backdrop-filter` quebra `position: fixed`**: essa foi a descoberta
+  mais importante da etapa. O menu mobile (pensado pra cobrir a tela
+  inteira com `fixed inset-0`) estava, na prática, só abrindo dentro da
+  faixa estreita do cabeçalho. Motivo: qualquer elemento com `filter`
+  ou `backdrop-filter` diferente de `none` vira, pela spec do CSS, o
+  "containing block" dos seus descendentes `position: fixed` — ou seja,
+  o `fixed` passa a ser relativo ao cabeçalho (que tem `backdrop-blur`),
+  não mais à janela do navegador. Como isso só aparece testando de
+  verdade em 360px (não dá pra ver isso lendo o código), é um ótimo
+  exemplo de por que o checklist da etapa exige testar nos 4
+  breakpoints com o navegador de verdade, não só imaginar que "deve
+  funcionar". Corrigido movendo o menu mobile pra fora do `<header>`.
+- **Reveal on scroll com CSS puro**: `animation-timeline: view()` liga
+  uma animação ao scroll — em vez de rodar no tempo (segundos), ela
+  "toca" conforme o elemento entra na tela. É suportado nos Chromium
+  recentes, mas não em todos os navegadores; por isso o `@supports`
+  detecta o suporte e, se não tiver, um `IntersectionObserver` em
+  JavaScript faz a mesma coisa manualmente (adiciona a classe
+  `.visible` quando o elemento entra na viewport).
+- **Por que o Lighthouse local mentiu a primeira vez**: rodei o
+  Lighthouse contra o build de produção e a Performance veio 55 — bem
+  abaixo do exigido. Investigando o relatório (`network-requests`),
+  achei DOIS problemas misturados: (1) o antivírus Kaspersky instalado
+  nesta máquina intercepta o tráfego HTTPS/HTTP e injeta ~900KB de
+  scripts próprios em QUALQUER página carregada pelo Chrome, inflando
+  os tempos de carregamento sem nenhuma relação com o código do site;
+  (2) um problema real — `devicon.min.css` importava a webfont
+  COMPLETA do devicon (milhares de ícones) só pra mostrar 10. Rodei o
+  Lighthouse de novo bloqueando o domínio do Kaspersky
+  (`--blocked-url-patterns`) pra isolar o problema real, e troquei a
+  webfont pelos 10 arquivos SVG individuais que realmente uso (14KB no
+  total, contra 1.4MB da fonte inteira). Isso é uma lição sobre validar
+  ferramentas de medição: "o número está ruim" não significa
+  automaticamente "meu código está ruim" — vale investigar a causa
+  antes de otimizar às cegas.
+
+**Como testar:**
+1. `astro dev --background` + backend rodando
+2. Rolar a página → cada seção (sobre/skills/projetos/contato) aparece
+   com fade+slide suave ao entrar na tela — testei e confere
+3. DevTools → 360px → abrir o menu (ícone hambúrguer) → cobre a tela
+   inteira, centralizado, sem "vazar" fora do cabeçalho — testei e
+   confere (era o bug do `backdrop-filter`)
+4. Testado também em 768px, 1280px, 1920px: sem rolagem horizontal em
+   nenhum, hero em 2 colunas a partir de 768px — confere
+5. No hero, apertar `↑ ↑ ↓ ↓ ← → ← → B A` → 5s de "chuva de matrix" no
+   terminal, some sozinha — testei e confere
+6. `npx astro build` → `dist/robots.txt` bloqueia `/admin`;
+   `dist/sitemap-index.xml` só lista `/` e `/en/`; `<head>` de cada
+   página tem `og:title`/`og:description`/`canonical` corretos
+7. `npx lighthouse http://localhost:4321/ --blocked-url-patterns="*kaspersky-labs.com*"`
+   (só necessário nesta máquina, por causa do antivírus) →
+   Performance 97, Accessibility 100, Best Practices 81*, SEO 100
+   (*o único item que falha é "usa HTTPS" — inevitável testando em
+   `http://localhost`; resolve sozinho quando o Caddy da Etapa 11
+   entrar com HTTPS)
+
+**Desafio opcional:**
+Abra o DevTools → Rendering → "Paint flashing" e role a página: dá pra
+ver visualmente quais elementos estão sendo repintados pela animação
+de reveal. Depois, tente adicionar `prefers-reduced-motion` no seu
+próprio sistema operacional (Windows: Configurações → Acessibilidade →
+Efeitos visuais → "Efeitos de animação" desligado) e recarregue o
+site — repare que os reveals aparecem instantaneamente, sem a
+animação, e a digitação do terminal também vira texto fixo.
+
+**Decisões tomadas:**
+- **`site:` no `astro.config.mjs` é um placeholder** (`portfolio.
+  seudominio.com`, igual ao resto de `docs/deploy/`) — o domínio real
+  só é decidido na Etapa 11, quando as 5 perguntas do deploy forem
+  respondidas. Precisa ser atualizado nesse momento (o sitemap e as
+  meta tags OG usam esse valor).
+- **Ícones do devicon viraram SVG local em vez de continuar via CDN/
+  pacote npm**: copiei só os 10 arquivos `.svg` realmente usados pra
+  `public/icons/devicon/` e removi a dependência `devicon` do
+  `package.json` — motivo detalhado acima (Lighthouse).
+
+## Expansão — Painel Admin gerencia todo o conteúdo do site
+
+**O que foi feito:**
+Depois da Etapa 10, veio um pedido extra: o `/admin` deveria editar
+não só projetos, mas o site inteiro — textos do "Sobre" e "Contato",
+as linhas digitadas no terminal do Hero, a lista de skills (nome,
+categoria, nível, textos), e os links (CV/LinkedIn/GitHub). Isso foi
+além do que o `MASTER_PROMPT.md` original pedia (ele só falava em CRUD
+de projetos), mas o usuário confirmou explicitamente o escopo. Migrei
+esse conteúdo — que até então vivia só em arquivos estáticos
+(`frontend/src/i18n/*.json` e `frontend/src/data/skills.ts`) — pro
+banco de dados, com endpoints novos na API e páginas novas no painel.
+
+**Arquivos criados/alterados (backend):**
+- `backend/app/models.py` — 3 tabelas novas: `SiteContent` (linha
+  única, id=1, com sobre/contato/links/rodapé bilíngues),
+  `HeroLine` (linhas do terminal, com posição), `Skill` (substitui o
+  `skills.ts` estático — cada skill agora é uma linha no banco)
+- `backend/app/lang.py` — `resolve_lang()` extraído de
+  `routers/projects.py` (agora reusado também pelo `content.py`)
+- `backend/app/routers/content.py` — `GET /api/site-content` (público,
+  resolve idioma pelo `Accept-Language`/`?lang=`, igual projetos) +
+  `GET`/`PUT /api/site-content/admin` (protegidos, dados crus
+  bilíngues, pro formulário)
+- `backend/app/routers/skills.py` — CRUD completo de skills
+  (`GET` é público — a lista já vem com os dois idiomas juntos, não
+  precisa resolver; `POST`/`PUT`/`DELETE` protegidos)
+- `backend/app/schemas.py` — schemas novos + `LEVEL_LABELS` (nível
+  1-5 → "básico"/"intermediário"/etc, igual ao `skills.ts`) + removi a
+  validação de skills fixa (`VALID_SKILL_IDS`)
+- `backend/app/routers/projects.py` — a validação de
+  `project.skills` agora consulta a tabela `Skill` no banco, não mais
+  um set fixo no Python (senão skills novas criadas pelo admin não
+  poderiam ser usadas em projetos)
+- `backend/seed.py` — popula as 3 tabelas novas com o conteúdo atual
+  (copiado dos JSONs/skills.ts), pra migração não mudar nada visível
+- `backend/tests/conftest.py` — passou a seedar as skills também
+  (senão os testes que usam `skills: ["python"]` quebrariam, já que
+  a validação agora é contra o banco)
+
+**Arquivos criados/alterados (frontend):**
+- `frontend/src/pages/admin/content.astro` — formulário único pra
+  Sobre + Contato + Links + Rodapé + linhas do Hero (com botão
+  "+ linha" pra adicionar/remover)
+- `frontend/src/pages/admin/skills/` (`index`, `new`, `edit`) +
+  `frontend/src/components/admin/SkillForm.astro` — CRUD de skills,
+  no mesmo padrão visual/técnico do CRUD de projetos
+- `frontend/src/layouts/AdminLayout.astro` — sidebar ganhou "skills" e
+  "conteúdo"
+- `frontend/src/components/admin/ProjectForm.astro` — a lista de
+  skills pra marcar no formulário de projeto agora vem de
+  `GET /api/skills` (dinâmica) em vez do import estático
+- `frontend/src/components/About.astro`, `TerminalHero.astro`,
+  `Footer.astro`, `Skills.astro` — cada um ganhou um script que busca
+  `/api/site-content` (ou `/api/skills`) no carregamento e SUBSTITUI o
+  conteúdo estático já renderizado, se a API responder
+
+**Conceitos explicados:**
+- **"Hidratar por cima do estático" em vez de "só renderizar via
+  JS"**: como o site é 100% estático (`output: "static"`, sem servidor
+  por trás das páginas), o jeito mais simples de fazer o CONTEÚDO ser
+  editável seria buscar tudo via JavaScript, do zero, como o
+  `ProjectsGrid` já fazia. Mas isso criaria um "flash" vazio ou de
+  loading toda vez, mesmo com a API rápida. A estratégia usada aqui é
+  diferente: o HTML já nasce com o texto certo (os mesmos valores que
+  estavam nos JSONs — usados como "chute inicial"), e um script,
+  rodando em paralelo, busca a versão atual da API e troca o texto NA
+  hora se for diferente. Resultado: primeira pintura sempre correta
+  (mesmo com JS lento ou API fora do ar) E o conteúdo fica atualizável
+  sem rebuild.
+- **Por que só `Skills.astro` precisou virar 100% dinâmico (em vez de
+  só "trocar texto")**: Sobre/Contato/Hero são um bloco fixo de campos
+  — dá pra só substituir o `textContent` de cada um. Skills é uma
+  LISTA (o admin pode adicionar ou remover skills inteiras, não só
+  editar texto) — não dá pra "hidratar" uma lista de tamanho variável
+  só trocando texto de elementos que já existem. Por isso o
+  `Skills.astro` foi reescrito pra: renderizar os cards estáticos
+  primeiro (igual antes, usando `skills.ts` como "chute inicial" —
+  útil se a API estiver fora do ar), e depois, se a API responder,
+  APAGAR esses cards e recriar a lista inteira a partir dos dados
+  reais. A função que abre o modal de detalhes também mudou: antes ela
+  lia os dados direto do HTML do card clicado (`data-skill="..."`);
+  agora ela recebe o objeto da skill diretamente, porque os cards
+  passaram a ser criados dinamicamente em JavaScript.
+- **Por que a validação de `project.skills` mudou de lugar**: antes,
+  o Pydantic (schema) validava se cada skill enviada estava numa lista
+  FIXA (`VALID_SKILL_IDS`, hardcoded no Python). Agora que skills vêm
+  do banco e o admin pode criar/apagar livremente, essa lista não pode
+  mais ser fixa — a validação precisa perguntar ao banco "essa skill
+  existe?" na hora, o que só é possível dentro de uma rota (que tem
+  acesso ao banco), não dentro de um schema Pydantic isolado.
+
+**Como testar:**
+1. Backend + frontend rodando, `venv\Scripts\python seed.py` já
+   populou as tabelas novas a partir do conteúdo atual
+2. `/admin/content` → editar o heading do "Sobre" → salvar → recarregar
+   `/` → o heading mudou, sem rebuild nenhum — testei e confere
+3. `/admin/skills` → editar o nível do Python pra 4 → o card e o modal
+   de skills no site público mostram "avançado" na hora — testei e
+   confere
+4. Derrubar o backend (parar o `uvicorn`) e recarregar `/`: Sobre,
+   Contato, Rodapé e os 8 cards de skills continuam aparecendo
+   normalmente — vêm do "chute inicial" estático, sem erro visível pro
+   usuário — testei e confere (é o comportamento pretendido, igual ao
+   `ProjectsGrid` já tinha)
+5. `/admin/new` (criar projeto) → a lista de skills marcáveis agora é
+   buscada da API (`GET /api/skills`), refletindo qualquer skill nova
+   criada no `/admin/skills` — testei e confere
+6. `cd backend && venv\Scripts\python -m pytest -q` → 8 testes passam
+   (ajustei o `conftest.py` pra seedar skills, já que a validação
+   agora é contra o banco)
+
+**Desafio opcional:**
+No `/admin/content`, apague TODAS as linhas do terminal do Hero
+(botão "remover" em cada uma) e salve. Recarregue a home e veja o que
+acontece com a animação de digitação — depois olhe o código de
+`TerminalHero.astro` pra entender por que `lines.length === 0` faz ela
+cair pro texto estático (que, nesse caso, também vai estar vazio).
+Como você resolveria isso pra não deixar o hero em branco?
+
+**Decisões tomadas:**
+- **Um formulário só para Sobre+Contato+Links+Rodapé+Hero, em vez de
+  páginas separadas**: são todos campos "singleton" (só existe UM
+  registro de cada), então juntar tudo numa página só evita navegação
+  desnecessária. Skills, por ser uma LISTA de itens (vários registros),
+  ganhou seu próprio CRUD completo (lista + criar + editar + excluir),
+  no mesmo padrão de Projetos.
+- **Linhas do Hero são substituídas por completo a cada salvamento**
+  (`DELETE` de todas + `INSERT` das novas), em vez de ter endpoints
+  `PUT`/`DELETE` por linha — mais simples de implementar no admin (um
+  botão "+ linha"/"remover" mexendo só no formulário, sem chamadas
+  extras à API) e o volume de dados é pequeno (poucas linhas).
+- **`footer.exit` (a legenda ao lado de `$ exit 0`) ficou fora do
+  formulário de admin**: é um detalhe decorativo minúsculo ligado ao
+  texto literal `exit 0` (que também não é traduzido, por ser sintaxe
+  de shell) — não fazia sentido dar peso de "conteúdo editável" pra
+  ele. Continua vindo do `pt.json`/`en.json`, como antes.

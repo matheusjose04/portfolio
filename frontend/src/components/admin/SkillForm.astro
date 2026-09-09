@@ -1,0 +1,195 @@
+<form id="skill-form" class="flex max-w-2xl flex-col gap-4">
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    id (usado nas skills dos projetos, ex: "python")
+    <input
+      id="field-skill-id"
+      type="text"
+      pattern="[a-z0-9-]+"
+      required
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 font-mono text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    />
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    nome
+    <input
+      id="field-name"
+      type="text"
+      required
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    />
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    categoria
+    <select
+      id="field-category"
+      required
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    >
+      <option value="languages">languages</option>
+      <option value="databases">databases</option>
+      <option value="frameworks">frameworks</option>
+      <option value="tools">other tools</option>
+    </select>
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    ícone (classe devicon, ex: "devicon-python-plain")
+    <input
+      id="field-icon"
+      type="text"
+      required
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 font-mono text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    />
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    nível (1 a 5)
+    <input
+      id="field-level"
+      type="number"
+      min="1"
+      max="5"
+      required
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    />
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    resumo (PT)
+    <textarea
+      id="field-summary-pt"
+      rows="2"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    ></textarea>
+  </label>
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    resumo (EN)
+    <textarea
+      id="field-summary-en"
+      rows="2"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    ></textarea>
+  </label>
+
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    experiência (PT)
+    <textarea
+      id="field-experience-pt"
+      rows="2"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    ></textarea>
+  </label>
+  <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+    experiência (EN)
+    <textarea
+      id="field-experience-en"
+      rows="2"
+      class="rounded border border-[var(--color-border)] bg-[var(--color-bg-soft)] px-3 py-2 text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+    ></textarea>
+  </label>
+
+  <p id="form-error" class="hidden font-mono text-sm text-[var(--color-danger)]"></p>
+
+  <div class="flex gap-3">
+    <button
+      type="submit"
+      class="rounded border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2 font-mono text-sm text-[var(--color-bg)]"
+      style="box-shadow: var(--glow);"
+    >salvar</button>
+    <a href="/admin/skills" class="rounded border border-[var(--color-border)] px-4 py-2 font-mono text-sm text-[var(--color-text)]">cancelar</a>
+  </div>
+</form>
+
+<script>
+  import { adminFetch } from "../../lib/admin-api";
+
+  interface AdminSkill {
+    id: number;
+    skill_id: string;
+    category: string;
+    name: string;
+    icon: string;
+    level: number;
+    summary: { pt: string; en: string };
+    experience: { pt: string; en: string };
+  }
+
+  const form = document.getElementById("skill-form") as HTMLFormElement | null;
+  const errorEl = document.getElementById("form-error");
+  const skillIdInput = document.getElementById("field-skill-id") as HTMLInputElement | null;
+  const nameInput = document.getElementById("field-name") as HTMLInputElement | null;
+  const categorySelect = document.getElementById("field-category") as HTMLSelectElement | null;
+  const iconInput = document.getElementById("field-icon") as HTMLInputElement | null;
+  const levelInput = document.getElementById("field-level") as HTMLInputElement | null;
+  const summaryPtInput = document.getElementById("field-summary-pt") as HTMLTextAreaElement | null;
+  const summaryEnInput = document.getElementById("field-summary-en") as HTMLTextAreaElement | null;
+  const experiencePtInput = document.getElementById("field-experience-pt") as HTMLTextAreaElement | null;
+  const experienceEnInput = document.getElementById("field-experience-en") as HTMLTextAreaElement | null;
+
+  const skillId = new URLSearchParams(window.location.search).get("id");
+
+  async function loadForEdit(id: string): Promise<void> {
+    const res = await adminFetch(`/api/skills/${id}`);
+    if (!res.ok) {
+      if (errorEl) {
+        errorEl.textContent = "skill não encontrada";
+        errorEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    const skill = (await res.json()) as AdminSkill;
+    if (skillIdInput) skillIdInput.value = skill.skill_id;
+    if (nameInput) nameInput.value = skill.name;
+    if (categorySelect) categorySelect.value = skill.category;
+    if (iconInput) iconInput.value = skill.icon;
+    if (levelInput) levelInput.value = String(skill.level);
+    if (summaryPtInput) summaryPtInput.value = skill.summary.pt;
+    if (summaryEnInput) summaryEnInput.value = skill.summary.en;
+    if (experiencePtInput) experiencePtInput.value = skill.experience.pt;
+    if (experienceEnInput) experienceEnInput.value = skill.experience.en;
+  }
+
+  if (skillId) {
+    void loadForEdit(skillId);
+  }
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl?.classList.add("hidden");
+
+    const payload = {
+      skill_id: skillIdInput?.value ?? "",
+      name: nameInput?.value ?? "",
+      category: categorySelect?.value ?? "languages",
+      icon: iconInput?.value ?? "",
+      level: Number(levelInput?.value ?? 1),
+      summary_pt: summaryPtInput?.value ?? "",
+      summary_en: summaryEnInput?.value ?? "",
+      experience_pt: experiencePtInput?.value ?? "",
+      experience_en: experienceEnInput?.value ?? "",
+    };
+
+    const isEdit = skillId !== null;
+    const res = await adminFetch(isEdit ? `/api/skills/${skillId}` : "/api/skills", {
+      method: isEdit ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data: unknown = await res.json().catch(() => null);
+      const detail =
+        data && typeof data === "object" && "detail" in data ? String((data as { detail: unknown }).detail) : null;
+      if (errorEl) {
+        errorEl.textContent = detail ?? "erro ao salvar";
+        errorEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    window.location.href = "/admin/skills";
+  });
+</script>

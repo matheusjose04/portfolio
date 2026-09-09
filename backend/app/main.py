@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .database import Base, engine
-from .routers import auth, projects, upload
+from .routers import auth, content, projects, skills, upload
 from .routers.upload import UPLOAD_DIR
 
 Base.metadata.create_all(bind=engine)
@@ -24,6 +24,8 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 app.include_router(auth.router)
 app.include_router(projects.router)
+app.include_router(content.router)
+app.include_router(skills.router)
 app.include_router(upload.router)
 
 

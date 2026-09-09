@@ -6,18 +6,21 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_admin
 from ..crud import unique_slug
 from ..database import get_db
-from ..models import AdminUser, Project
+from ..lang import resolve_lang
+from ..models import AdminUser, Project, Skill
 from ..schemas import ProjectAdminOut, ProjectCreate, ProjectOut, ProjectUpdate
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
-def resolve_lang(accept_language: str | None, lang_query: str | None) -> str:
-    if lang_query in ("pt", "en"):
-        return lang_query
-    if accept_language and accept_language.lower().startswith("en"):
-        return "en"
-    return "pt"
+def _validate_skill_ids(db: Session, skill_ids: list[str]) -> None:
+    valid = {row[0] for row in db.query(Skill.skill_id).all()}
+    invalid = sorted(set(skill_ids) - valid)
+    if invalid:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"skills inválidas: {', '.join(invalid)}",
+        )
 
 
 def to_out(project: Project, lang: str) -> ProjectOut:
@@ -91,6 +94,7 @@ def create_project(
     db: Annotated[Session, Depends(get_db)],
     admin: Annotated[AdminUser, Depends(get_current_admin)],
 ) -> ProjectOut:
+    _validate_skill_ids(db, payload.skills)
     project = Project(
         title=payload.title,
         slug=unique_slug(db, payload.title),
@@ -123,6 +127,8 @@ def update_project(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projeto não encontrado")
 
     data = payload.model_dump(exclude_unset=True)
+    if "skills" in data:
+        _validate_skill_ids(db, data["skills"])
     if "title" in data and data["title"] != project.title:
         project.slug = unique_slug(db, data["title"], ignore_id=project.id)
     for field, value in data.items():

@@ -1,7 +1,3 @@
----
-import { skills } from "../../data/skills";
----
-
 <form id="project-form" class="flex max-w-2xl flex-col gap-4">
   <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
     título
@@ -63,14 +59,7 @@ import { skills } from "../../data/skills";
 
   <fieldset class="flex flex-col gap-2">
     <legend class="mb-1 text-sm text-[var(--color-text)]">skills</legend>
-    <div class="flex flex-wrap gap-3">
-      {skills.map((s) => (
-        <label class="flex items-center gap-1.5 font-mono text-xs text-[var(--color-text)]">
-          <input type="checkbox" class="field-skill" value={s.id} />
-          {s.name}
-        </label>
-      ))}
-    </div>
+    <div id="field-skills-container" class="flex flex-wrap gap-3"></div>
   </fieldset>
 
   <label class="flex flex-col gap-1 text-sm text-[var(--color-text)]">
@@ -171,8 +160,31 @@ import { skills } from "../../data/skills";
   const imagePreview = document.getElementById("field-image-preview") as HTMLImageElement | null;
   const imageStatus = document.getElementById("field-image-status");
 
+  const skillsContainer = document.getElementById("field-skills-container");
   const projectId = new URLSearchParams(window.location.search).get("id");
   let currentImageUrl: string | null = null;
+
+  interface AdminSkill {
+    skill_id: string;
+    name: string;
+  }
+
+  async function loadSkillOptions(): Promise<void> {
+    if (!skillsContainer) return;
+    const res = await fetch(`${API_BASE}/api/skills`);
+    if (!res.ok) return;
+    const items = (await res.json()) as AdminSkill[];
+    items.forEach((s) => {
+      const label = document.createElement("label");
+      label.className = "flex items-center gap-1.5 font-mono text-xs text-[var(--color-text)]";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.className = "field-skill";
+      input.value = s.skill_id;
+      label.append(input, document.createTextNode(s.name));
+      skillsContainer.appendChild(label);
+    });
+  }
 
   function showPreview(url: string): void {
     if (!imagePreview) return;
@@ -231,9 +243,9 @@ import { skills } from "../../data/skills";
     });
   }
 
-  if (projectId) {
-    void loadForEdit(projectId);
-  }
+  void loadSkillOptions().then(() => {
+    if (projectId) void loadForEdit(projectId);
+  });
 
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();

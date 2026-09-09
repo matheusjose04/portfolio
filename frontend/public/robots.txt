@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /admin
+
+Sitemap: https://portfolio.seudominio.com/sitemap-index.xml

@@ -1,0 +1,154 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Skills">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="font-mono text-xl text-[var(--color-primary)]">~# skills</h1>
+    <a href="/admin/skills/new" class="rounded border border-[var(--color-primary)] px-3 py-1.5 font-mono text-sm text-[var(--color-primary)]">+ nova</a>
+  </div>
+  <p id="admin-status" class="mb-4 font-mono text-sm text-[var(--color-text-dim)]"></p>
+  <div id="admin-table-wrap" class="overflow-x-auto"></div>
+
+  <div id="confirm-overlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4" data-open="false">
+    <div id="confirm-modal" role="dialog" aria-modal="true" class="w-full max-w-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+      <p class="mb-4 font-mono text-sm text-[var(--color-text)]">~# rm <span id="confirm-title" class="text-[var(--color-danger)]"></span>? [y/n]</p>
+      <div class="flex justify-end gap-3">
+        <button id="confirm-no" type="button" class="rounded border border-[var(--color-border)] px-3 py-1.5 font-mono text-sm text-[var(--color-text)]">n</button>
+        <button id="confirm-yes" type="button" class="rounded border border-[var(--color-danger)] bg-[var(--color-danger)] px-3 py-1.5 font-mono text-sm text-[var(--color-bg)]">y</button>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { adminFetch } from "../../../lib/admin-api";
+  import { devIconSvg } from "../../../lib/icon-url";
+
+  interface AdminSkill {
+    id: number;
+    skill_id: string;
+    category: string;
+    name: string;
+    icon: string;
+    level: number;
+  }
+
+  const tableWrap = document.getElementById("admin-table-wrap");
+  const statusEl = document.getElementById("admin-status");
+  const overlay = document.getElementById("confirm-overlay");
+  const confirmTitleEl = document.getElementById("confirm-title");
+  const confirmYesBtn = document.getElementById("confirm-yes");
+  const confirmNoBtn = document.getElementById("confirm-no");
+
+  let pendingDeleteId: number | null = null;
+
+  function openConfirm(id: number, title: string): void {
+    pendingDeleteId = id;
+    if (confirmTitleEl) confirmTitleEl.textContent = title;
+    if (overlay) {
+      overlay.dataset.open = "true";
+      overlay.classList.remove("hidden");
+      overlay.classList.add("flex");
+    }
+  }
+
+  function closeConfirm(): void {
+    pendingDeleteId = null;
+    if (overlay) {
+      overlay.dataset.open = "false";
+      overlay.classList.add("hidden");
+      overlay.classList.remove("flex");
+    }
+  }
+
+  confirmNoBtn?.addEventListener("click", closeConfirm);
+  overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) closeConfirm();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && overlay?.dataset.open === "true") closeConfirm();
+  });
+
+  confirmYesBtn?.addEventListener("click", async () => {
+    if (pendingDeleteId === null) return;
+    const res = await adminFetch(`/api/skills/${pendingDeleteId}`, { method: "DELETE" });
+    closeConfirm();
+    if (res.ok) {
+      void load();
+    } else if (statusEl) {
+      statusEl.textContent = "> erro ao excluir (pode estar em uso por um projeto)";
+    }
+  });
+
+  function buildRow(skill: AdminSkill): HTMLTableRowElement {
+    const tr = document.createElement("tr");
+    tr.className = "border-b border-[var(--color-border)]";
+
+    const iconTd = document.createElement("td");
+    iconTd.className = "py-2 pr-4";
+    const icon = document.createElement("img");
+    icon.className = "h-6 w-6";
+    icon.src = devIconSvg(skill.icon);
+    icon.alt = "";
+    iconTd.appendChild(icon);
+
+    const nameTd = document.createElement("td");
+    nameTd.className = "py-2 pr-4 font-mono text-sm text-[var(--color-text)]";
+    nameTd.textContent = skill.name;
+
+    const categoryTd = document.createElement("td");
+    categoryTd.className = "py-2 pr-4 font-mono text-xs text-[var(--color-text-dim)]";
+    categoryTd.textContent = skill.category;
+
+    const levelTd = document.createElement("td");
+    levelTd.className = "py-2 pr-4 font-mono text-xs text-[var(--color-text-dim)]";
+    levelTd.textContent = String(skill.level);
+
+    const actionsTd = document.createElement("td");
+    actionsTd.className = "flex gap-2 py-2";
+
+    const editLink = document.createElement("a");
+    editLink.href = `/admin/skills/edit?id=${skill.id}`;
+    editLink.textContent = "editar";
+    editLink.className = "rounded border border-[var(--color-border)] px-2 py-1 font-mono text-xs text-[var(--color-primary)] hover:border-[var(--color-primary)]";
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "excluir";
+    deleteBtn.className = "rounded border border-[var(--color-border)] px-2 py-1 font-mono text-xs text-[var(--color-danger)] hover:border-[var(--color-danger)]";
+    deleteBtn.addEventListener("click", () => openConfirm(skill.id, skill.name));
+
+    actionsTd.append(editLink, deleteBtn);
+    tr.append(iconTd, nameTd, categoryTd, levelTd, actionsTd);
+    return tr;
+  }
+
+  async function load(): Promise<void> {
+    if (!tableWrap || !statusEl) return;
+    statusEl.textContent = "carregando...";
+    tableWrap.innerHTML = "";
+
+    const res = await adminFetch("/api/skills");
+    if (!res.ok) {
+      statusEl.textContent = "> erro ao carregar skills";
+      return;
+    }
+
+    const items = (await res.json()) as AdminSkill[];
+    if (items.length === 0) {
+      statusEl.textContent = "> nenhuma skill ainda";
+      return;
+    }
+
+    statusEl.textContent = "";
+    const table = document.createElement("table");
+    table.className = "w-full text-left";
+    const tbody = document.createElement("tbody");
+    items.forEach((s) => tbody.appendChild(buildRow(s)));
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+  }
+
+  void load();
+</script>

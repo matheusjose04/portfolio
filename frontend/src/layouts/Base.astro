@@ -3,10 +3,21 @@ import "../styles/global.css";
 
 interface Props {
   title: string;
+  description?: string;
   lang?: "pt" | "en";
+  noindex?: boolean;
 }
 
-const { title, lang = "pt" } = Astro.props;
+const {
+  title,
+  lang = "pt",
+  noindex = false,
+  description = lang === "en"
+    ? "Fullstack developer & cybersecurity enthusiast — projects, skills and contact."
+    : "Desenvolvedor fullstack & entusiasta de cybersecurity — projetos, skills e contato.",
+} = Astro.props;
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 ---
 
 <html lang={lang}>
@@ -16,6 +27,17 @@ const { title, lang = "pt" } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:locale" content={lang === "en" ? "en_US" : "pt_BR"} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
     <script is:inline>
       // Se veio antes pra raiz ("/") e escolheu EN, manda pra /en/ direto.
       // Restrito à raiz pública: nunca mexe em /admin/* (sempre pt) nem em /en/
@@ -37,5 +59,24 @@ const { title, lang = "pt" } = Astro.props;
   </head>
   <body>
     <slot />
+    <script>
+      // Fallback pra navegadores sem animation-timeline: view() (a versão
+      // nativa em CSS já cuida do reveal nos que suportam).
+      if (!CSS.supports("animation-timeline: view()")) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("visible");
+                observer.unobserve(entry.target);
+              }
+            }
+          },
+          { threshold: 0.15 },
+        );
+
+        document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+      }
+    </script>
   </body>
 </html>
