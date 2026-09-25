@@ -60,23 +60,19 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
   <body>
     <slot />
     <script>
-      // Fallback pra navegadores sem animation-timeline: view() (a versão
-      // nativa em CSS já cuida do reveal nos que suportam).
-      if (!CSS.supports("animation-timeline: view()")) {
-        const observer = new IntersectionObserver(
-          (entries) => {
-            for (const entry of entries) {
-              if (entry.isIntersecting) {
-                entry.target.classList.add("visible");
-                observer.unobserve(entry.target);
-              }
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              observer.unobserve(entry.target);
             }
-          },
-          { threshold: 0.15 },
-        );
+          }
+        },
+        { threshold: 0.15 },
+      );
 
-        document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
-      }
+      document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
     </script>
   </body>
 </html>
