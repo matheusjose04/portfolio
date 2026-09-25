@@ -5,8 +5,7 @@ import sitemap from '@astrojs/sitemap';
 
 // https://astro.build/config
 export default defineConfig({
-  // TODO: trocar pelo domínio real definido na Etapa 11 (deploy na VPS).
-  site: 'https://portfolio.seudominio.com',
+  site: 'https://portfolio-five-nu-5jfji1hg2p.vercel.app',
   integrations: [
     sitemap({
       filter: (page) => !page.includes('/admin'),
